@@ -11,6 +11,8 @@ from hw_asr.utils import ROOT_PATH
 from speechbrain.utils.data_utils import download_file
 from tqdm import tqdm
 
+from hw_asr.utils.parse_config import ConfigParser
+
 logger = logging.getLogger(__name__)
 
 URL_LINKS = {
@@ -19,14 +21,14 @@ URL_LINKS = {
 
 
 class LJspeechDataset(BaseDataset):
-    def __init__(self, part, data_dir=None, *args, **kwargs):
+    def __init__(self, part, config_parser: ConfigParser, data_dir=None, *args, **kwargs):
         if data_dir is None:
-            data_dir = ROOT_PATH / "data" / "datasets" / "ljspeech"
+            data_dir = config_parser.get_data_root_dir() / "data" / "datasets" / "ljspeech"
             data_dir.mkdir(exist_ok=True, parents=True)
         self._data_dir = data_dir
         index = self._get_or_load_index(part)
 
-        super().__init__(index, *args, **kwargs)
+        super().__init__(index, *args, config_parser=config_parser, **kwargs)
 
     def _load_dataset(self):
         arch_path = self._data_dir / "LJSpeech-1.1.tar.bz2"

@@ -8,7 +8,7 @@ from hw_asr.utils.parse_config import ConfigParser
 
 @contextmanager
 def clear_log_folder_after_use(config_parser: ConfigParser):
-    # this context manager deletes the log folders weather the body was executed succesfully or not
+    # this context manager deletes the log folders whether the body was executed successfully or not
     try:
         yield config_parser
     finally:

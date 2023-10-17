@@ -10,6 +10,7 @@ from tqdm import tqdm
 
 from hw_asr.base.base_dataset import BaseDataset
 from hw_asr.utils import ROOT_PATH
+from hw_asr.utils.parse_config import ConfigParser
 
 logger = logging.getLogger(__name__)
 
@@ -25,11 +26,11 @@ URL_LINKS = {
 
 
 class LibrispeechDataset(BaseDataset):
-    def __init__(self, part, data_dir=None, *args, **kwargs):
+    def __init__(self, part, config_parser: ConfigParser, data_dir=None, *args, **kwargs):
         assert part in URL_LINKS or part == 'train_all'
 
         if data_dir is None:
-            data_dir = ROOT_PATH / "data" / "datasets" / "librispeech"
+            data_dir = config_parser.get_data_root_dir() / "data" / "datasets" / "librispeech"
             data_dir.mkdir(exist_ok=True, parents=True)
         self._data_dir = data_dir
         if part == 'train_all':
@@ -38,7 +39,7 @@ class LibrispeechDataset(BaseDataset):
         else:
             index = self._get_or_load_index(part)
 
-        super().__init__(index, *args, **kwargs)
+        super().__init__(index, *args, config_parser=config_parser, **kwargs)
 
     def _load_part(self, part):
         arch_path = self._data_dir / f"{part}.tar.gz"

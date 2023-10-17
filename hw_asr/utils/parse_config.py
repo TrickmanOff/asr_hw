@@ -146,6 +146,12 @@ class ConfigParser:
                                                    default_module=text_encoder_module)
         return self._text_encoder
 
+    def get_data_root_dir(self) -> Path:
+        if "data" not in self._config or "root_dir" not in self._config["data"]:
+            return ROOT_PATH
+        else:
+            return Path(self._config["data"]["root_dir"])
+
     # setting read-only attributes
     @property
     def config(self):

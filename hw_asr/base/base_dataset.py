@@ -26,6 +26,11 @@ class BaseDataset(Dataset):
             max_audio_length=None,
             max_text_length=None,
     ):
+        """
+        :param limit: not more than `limit` random audios are taken from the index
+        :param max_audio_length: max audio length in seconds
+                                 all audios with length greater or equal will be excluded
+        """
         self.text_encoder = text_encoder
         self.config_parser = config_parser
         self.wave_augs = wave_augs
