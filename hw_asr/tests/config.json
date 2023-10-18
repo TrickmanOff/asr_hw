@@ -22,6 +22,7 @@
     }
   },
   "data": {
+    "root_dir": "/Volumes/Samsung_T5/hse4/dla/hw1/data",
     "train": {
       "batch_size": 20,
       "num_workers": 0,
