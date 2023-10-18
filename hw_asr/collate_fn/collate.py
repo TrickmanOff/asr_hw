@@ -33,7 +33,10 @@ def collate_fn(dataset_items: List[dict]):
 
     # spectrogram
     specs = [item["spectrogram"] for item in dataset_items]
-    max_time_dim = max(spec.shape[2] for spec in specs)
+    specs_lens = torch.tensor([spec.shape[2] for spec in specs])
+    result_batch["spectrogram_length"] = specs_lens
+
+    max_time_dim = max(specs_lens)
     padded_specs = [
         F.pad(spec, (0, max_time_dim - spec.shape[2]), value=PADDING_VALUE)
         for spec in specs
