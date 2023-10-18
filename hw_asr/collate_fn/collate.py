@@ -61,4 +61,8 @@ def collate_fn(dataset_items: List[dict]):
     texts = [item["text"] for item in dataset_items]
     result_batch["text"] = texts
 
+    # audio paths
+    audio_paths = [item["audio_path"] for item in dataset_items]
+    result_batch["audio_path"] = audio_paths
+
     return result_batch
