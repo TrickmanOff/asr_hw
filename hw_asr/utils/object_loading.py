@@ -13,6 +13,8 @@ from hw_asr.utils.parse_config import ConfigParser
 def get_dataloaders(configs: ConfigParser, text_encoder: BaseTextEncoder):
     dataloaders = {}
     for split, params in configs["data"].items():
+        if not isinstance(params, dict):
+            continue
         num_workers = params.get("num_workers", 1)
 
         # set train augmentations

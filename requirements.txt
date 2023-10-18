@@ -8,7 +8,7 @@ pandas
 
 speechbrain~=0.5.12
 datasets
-torch_audiomentations
+torch_audiomentations==0.11.0
 editdistance
 wandb
 pyctcdecode
