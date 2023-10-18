@@ -9,6 +9,9 @@ from hw_asr.metric.utils import calc_wer
 
 
 class ArgmaxWERMetric(BaseMetric):
+    """
+    Average WER if each token is selected as simple argmax
+    """
     def __init__(self, text_encoder: BaseTextEncoder, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.text_encoder = text_encoder
