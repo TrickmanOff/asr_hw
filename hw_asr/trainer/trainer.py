@@ -1,6 +1,7 @@
 import random
 from pathlib import Path
 from random import shuffle
+from typing import Sequence
 
 import PIL
 import pandas as pd
@@ -11,6 +12,7 @@ from torchvision.transforms import ToTensor
 from tqdm import tqdm
 
 from hw_asr.base import BaseTrainer
+from hw_asr.base.base_metric import BaseMetric
 from hw_asr.base.base_text_encoder import BaseTextEncoder
 from hw_asr.logger.utils import plot_spectrogram_to_buf
 from hw_asr.metric.utils import calc_cer, calc_wer
@@ -26,7 +28,7 @@ class Trainer(BaseTrainer):
             self,
             model,
             criterion,
-            metrics,
+            metrics: Sequence[BaseMetric],
             optimizer,
             config,
             device,
@@ -74,7 +76,7 @@ class Trainer(BaseTrainer):
                 self.model.parameters(), self.config["trainer"]["grad_norm_clip"]
             )
 
-    def _train_epoch(self, epoch):
+    def _train_epoch(self, epoch) -> dict:
         """
         Training logic for an epoch
 
@@ -218,20 +220,37 @@ class Trainer(BaseTrainer):
         ]
         argmax_texts_raw = [self.text_encoder.decode(inds) for inds in argmax_inds]
         argmax_texts = [self.text_encoder.ctc_decode(inds) for inds in argmax_inds]
-        tuples = list(zip(argmax_texts, text, argmax_texts_raw, audio_path))
+
+        beam_size = self.config["trainer"].get("beam_size", 10)
+        beam_search_top_hypos = [
+            self.text_encoder.ctc_beam_search(torch.exp(log_probs), probs_len, beam_size)[0]
+            for log_probs, probs_len in zip(log_probs, log_probs_length)
+        ]
+        beam_search_top_texts = [hypo.text for hypo in beam_search_top_hypos]
+        beam_search_top_texts_prob = [hypo.prob for hypo in beam_search_top_hypos]
+
+        tuples = list(zip(argmax_texts, text, argmax_texts_raw,
+                          beam_search_top_texts, beam_search_top_texts_prob, audio_path))
         shuffle(tuples)
         rows = {}
-        for pred, target, raw_pred, audio_path in tuples[:examples_to_log]:
+        for argmax_pred, target, argmax_raw_pred, bs_pred, bs_prob, audio_path in tuples[:examples_to_log]:
             target = BaseTextEncoder.normalize_text(target)
-            wer = calc_wer(target, pred) * 100
-            cer = calc_cer(target, pred) * 100
+            argmax_wer = calc_wer(target, argmax_pred) * 100
+            argmax_cer = calc_cer(target, argmax_pred) * 100
+
+            bs_wer = calc_wer(target, bs_pred) * 100
+            bs_cer = calc_cer(target, bs_pred) * 100
 
             rows[Path(audio_path).name] = {
                 "target": target,
-                "raw prediction": raw_pred,
-                "predictions": pred,
-                "wer": wer,
-                "cer": cer,
+                "raw prediction": argmax_raw_pred,
+                "prediction": argmax_pred,
+                "argmax wer": argmax_wer,
+                "argmax cer": argmax_cer,
+                "bs prediction": bs_pred,
+                "bs prob": bs_prob,
+                "bs wer": bs_wer,
+                "bs cer": bs_cer,
             }
         self.writer.add_table("predictions", pd.DataFrame.from_dict(rows, orient="index"))
 

@@ -85,6 +85,7 @@ class WanDBWriter:
         }, step=self.step)
 
     def add_table(self, table_name, table: pd.DataFrame):
+        table = table.reset_index().rename(columns={'index': 'audio_path'})
         self.wandb.log({self._scalar_name(table_name): wandb.Table(dataframe=table)},
                        step=self.step)
 

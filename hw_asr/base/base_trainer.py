@@ -56,7 +56,7 @@ class BaseTrainer:
             self._resume_checkpoint(config.resume)
 
     @abstractmethod
-    def _train_epoch(self, epoch):
+    def _train_epoch(self, epoch) -> dict:
         """
         Training logic for an epoch
 
