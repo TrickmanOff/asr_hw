@@ -6,6 +6,8 @@ from torch import Tensor, nn
 
 from hw_asr.base.base_model import BaseModel
 
+# TODO: use masked BatchNorm
+
 
 def _broadcast_to_lists(*args, target_length: Optional[int] = None) -> List:
     length = None
@@ -73,20 +75,25 @@ class GRUBlock(nn.Module):
                  in_num_features: int,
                  hidden_dims: Union[int, List[int]],
                  num_of_layers: Optional[int] = None,
-                 use_batch_norm: bool = False):
+                 use_batch_norm: bool = True):
         super().__init__()
-
-        assert use_batch_norm is False, 'Not implemented'
 
         hidden_dims, *_ = _broadcast_to_lists(hidden_dims, target_length=num_of_layers)
 
-        layers: List[nn.Module] = []
+        rnn_layers: List[nn.Module] = []
+        bn_layers: List[nn.Module] = []
         for in_features, hidden_dim in zip([in_num_features] + hidden_dims[:-1], hidden_dims):
             rnn_layer = nn.GRU(input_size=in_features, hidden_size=hidden_dim, batch_first=True)
-            layers.append(rnn_layer)
+            rnn_layers.append(rnn_layer)
+            if use_batch_norm:
+                bn_layer = nn.BatchNorm1d(hidden_dim)
+                bn_layers.append(bn_layer)
+        if not use_batch_norm:
+            bn_layers = [None] * len(rnn_layers)
 
         self._out_num_features = hidden_dims[-1]
-        self.layers = layers
+        self.rnn_layers = nn.ModuleList(rnn_layers)
+        self.bn_layers = nn.ModuleList(bn_layers)
 
     def forward(self, input: Tensor) -> Tensor:
         """
@@ -94,11 +101,13 @@ class GRUBlock(nn.Module):
         output of shape (batch_dim, out_num_features, time_dim)
         TODO: use `torch.nn.utils.rnn.pack_padded_sequence()`
         """
-        # input shape for block: (batch_dim, time_dim, num_features)
-        prev_output = input.transpose(1, 2)
-        for layer in self.layers:
-            prev_output = layer(prev_output)[0]
-        return prev_output.transpose(1, 2)
+        # input shape for RNN block: (batch_dim, time_dim, num_features)
+        prev_output = input
+        for rnn_layer, bn_layer in zip(self.rnn_layers, self.bn_layers):
+            prev_output = rnn_layer(prev_output.transpose(-2, -1))[0]  # (batch_dim, time_dim, hidden_dim)
+            if bn_layer is not None:
+                prev_output = bn_layer(prev_output.transpose(-2, -1))
+        return prev_output
 
     @property
     def out_num_features(self) -> int:
@@ -131,11 +140,12 @@ class LinearBlock(nn.Module):
 
 
 class DeepSpeech2(BaseModel):
-    def __init__(self, n_feats, n_class, cnn_config: Dict):
+    def __init__(self, n_feats, n_class, cnn_config: Dict, gru_config: Dict):
         super().__init__(n_feats, n_class)
         self.cnn_block = SpectrogramCNNBlock(**cnn_config)
         num_features_after_cnn = n_feats * self.cnn_block.output_channels_dim
-        self.linear = nn.Linear(num_features_after_cnn, n_class)
+        self.gru_block = GRUBlock(num_features_after_cnn, **gru_config)
+        self.linear = nn.Linear(self.gru_block.out_num_features, n_class)
 
     def forward(self, spectrogram, **batch) -> Union[Tensor, dict]:
         """
@@ -144,8 +154,10 @@ class DeepSpeech2(BaseModel):
         """
         cnn_output = self.cnn_block(spectrogram)  # (batch_dim, output_channels_dim, n_feats, time_dim)
         cnn_concat_channels = cnn_output.flatten(-3, -2)  # (batch_dim, output_channels_dim * n_feats, time_dim)
-        cnn_concat_channels = cnn_concat_channels.transpose(-2, -1)  # (batch_dim, time_dim, output_channels_dim * n_feats)
-        logits = self.linear(cnn_concat_channels)  # (batch_dim, time_dim, n_class)
+        gru_output = self.gru_block(cnn_concat_channels)  # (batch_dim, gru_out_num_features, time_dim)
+        gru_output = gru_output.transpose(-2, -1)  # (batch_dim, time_dim, gru_out_num_features)
+
+        logits = self.linear(gru_output)  # (batch_dim, time_dim, n_class)
         return {"logits": logits}
 
     def transform_input_lengths(self, input_lengths):

@@ -19,8 +19,11 @@
     "args": {
       "n_feats": 128,
       "cnn_config": {
-        "output_channels": [32],
+        "output_channels": [16],
         "filters": [[41, 11]]
+      },
+      "gru_config": {
+        "hidden_dims": [1024, 1024, 512, 128]
       }
     }
   },
