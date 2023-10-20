@@ -32,7 +32,7 @@
   },
   "data": {
     "train": {
-      "batch_size": 128,
+      "batch_size": 20,
       "num_workers": 0,
       "datasets": [
         {
@@ -48,7 +48,7 @@
       ]
     },
     "val": {
-      "batch_size": 100,
+      "batch_size": 20,
       "num_workers": 0,
       "datasets": [
         {
@@ -59,7 +59,7 @@
             "max_text_length": 200,
             "data_dir": "/kaggle/input/librispeech-clean/LibriSpeech",
             "index_dir": "/kaggle/working/indices",
-            "limit": 100
+            "limit": 20
           }
         }
       ]
