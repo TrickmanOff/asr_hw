@@ -29,6 +29,9 @@ class LibrispeechDataset(BaseDataset):
     def __init__(self, part, config_parser: ConfigParser, data_dir=None, *args, **kwargs):
         assert part in URL_LINKS or part == 'train_all'
 
+        if isinstance(data_dir, str):
+            data_dir = Path(data_dir)
+
         if data_dir is None:
             data_dir = config_parser.get_data_root_dir() / "data" / "datasets" / "librispeech"
             data_dir.mkdir(exist_ok=True, parents=True)
