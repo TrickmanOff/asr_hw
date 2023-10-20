@@ -91,8 +91,8 @@
   "lr_scheduler": {
     "type": "OneCycleLR",
     "args": {
-      "steps_per_epoch": 100,
-      "epochs": 50,
+      "steps_per_epoch": 500,
+      "epochs": 200,
       "anneal_strategy": "cos",
       "max_lr": 1e-2,
       "pct_start": 0.2
@@ -108,7 +108,7 @@
     "visualize": "wandb",
     "wandb_project": "asr_project",
     "wandb_run": "kaggle_test_deepspeech2",
-    "len_epoch": 100,
+    "len_epoch": 500,
     "grad_norm_clip": 10,
     "beam_size": 10
   }
