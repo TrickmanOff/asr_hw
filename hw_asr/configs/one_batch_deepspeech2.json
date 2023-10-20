@@ -24,6 +24,9 @@
       },
       "gru_config": {
         "hidden_dims": [1024, 1024, 512, 128]
+      },
+      "lookahead_config": {
+        "future_time": 5
       }
     }
   },

@@ -139,12 +139,29 @@ class LinearBlock(nn.Module):
         pass
 
 
+class Lookahead(nn.Module):
+    def __init__(self, in_features: int, future_time: int):
+        super().__init__()
+        self._future_time = future_time
+        self.conv = nn.Conv1d(in_features, in_features, kernel_size=future_time,
+                              padding=future_time-1, groups=in_features, bias=False)
+
+    def forward(self, input: Tensor) -> Tensor:
+        """
+        input of shape  (batch_dim, num_features, time_dim)
+        output of shape (batch_dim, num_features, time_dim)
+        """
+        output = self.conv(input)
+        return output[:, :, self._future_time-1:]
+
+
 class DeepSpeech2(BaseModel):
-    def __init__(self, n_feats, n_class, cnn_config: Dict, gru_config: Dict):
+    def __init__(self, n_feats, n_class, cnn_config: Dict, gru_config: Dict, lookahead_config: Dict):
         super().__init__(n_feats, n_class)
         self.cnn_block = SpectrogramCNNBlock(**cnn_config)
         num_features_after_cnn = n_feats * self.cnn_block.output_channels_dim
         self.gru_block = GRUBlock(num_features_after_cnn, **gru_config)
+        self.lookahead = Lookahead(self.gru_block.out_num_features, **lookahead_config)
         self.linear = nn.Linear(self.gru_block.out_num_features, n_class)
 
     def forward(self, spectrogram, **batch) -> Union[Tensor, dict]:
@@ -155,9 +172,8 @@ class DeepSpeech2(BaseModel):
         cnn_output = self.cnn_block(spectrogram)  # (batch_dim, output_channels_dim, n_feats, time_dim)
         cnn_concat_channels = cnn_output.flatten(-3, -2)  # (batch_dim, output_channels_dim * n_feats, time_dim)
         gru_output = self.gru_block(cnn_concat_channels)  # (batch_dim, gru_out_num_features, time_dim)
-        gru_output = gru_output.transpose(-2, -1)  # (batch_dim, time_dim, gru_out_num_features)
-
-        logits = self.linear(gru_output)  # (batch_dim, time_dim, n_class)
+        gru_output_with_lookahead = self.lookahead(gru_output).transpose(-2, -1)  # (batch_dim, time_dim, gru_out_num_features)
+        logits = self.linear(gru_output_with_lookahead)  # (batch_dim, time_dim, n_class)
         return {"logits": logits}
 
     def transform_input_lengths(self, input_lengths):
