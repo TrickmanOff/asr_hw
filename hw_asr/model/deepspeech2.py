@@ -1,6 +1,7 @@
 from enum import Enum
 from typing import List, Optional, Tuple, Union, Dict
 
+import numpy as np
 import torch
 from torch import Tensor, nn
 
@@ -23,32 +24,40 @@ def _broadcast_to_lists(*args, target_length: Optional[int] = None) -> List:
     return [seq if isinstance(seq, List) else [seq] * target_length for seq in args]
 
 
+def _calc_padding_for_same(kernel_size: Tuple) -> Tuple:
+    assert all(size % 2 == 1 for size in kernel_size)
+    padding = tuple((size - 1) // 2 for size in kernel_size)
+    return padding
+
+
 class SpectrogramCNNBlock(nn.Module):
     def __init__(self,
                  output_channels: Union[int, List[int]],
                  filters: Union[int, Tuple[int, int], List[Union[int, Tuple[int, int]]]],
+                 stride: Union[int, Tuple[int, int], List[Union[int, Tuple[int, int]]]] = 1,
                  activation_type=nn.ReLU,
                  num_of_layers: Optional[int] = None):
         """
-        TODO: add support of stride
         :param filters: if int or List[int], then 1D-convolution over time is applied
         (currently 1D-convolution is not supported)
         """
         super().__init__()
 
-        output_channels, filters = \
-            _broadcast_to_lists(output_channels, filters, target_length=num_of_layers)
+        output_channels, filters, stride = \
+            _broadcast_to_lists(output_channels, filters, stride, target_length=num_of_layers)
+        self._stride = stride
 
         input_channels = 1
         layers: List[nn.Module] = []
-        for in_channels, out_channels, kernel_size in \
-                zip([input_channels] + output_channels[:-1], output_channels, filters):
+        for in_channels, out_channels, kernel_size, stride in \
+                zip([input_channels] + output_channels[:-1], output_channels, filters, stride):
 
             if isinstance(kernel_size, int):  # 1D
                 raise NotImplementedError()
             else:  # 2D
                 # input: # (batch_size, in_channels, num_features, time_frames)
-                conv_layer = nn.Conv2d(in_channels, out_channels, kernel_size, padding='same')
+                padding = _calc_padding_for_same(kernel_size=kernel_size)
+                conv_layer = nn.Conv2d(in_channels, out_channels, kernel_size, stride=stride, padding=padding)
                 norm_layer = nn.BatchNorm2d(num_features=out_channels)
                 activation = activation_type()
             layers += [conv_layer, norm_layer, activation]
@@ -64,6 +73,11 @@ class SpectrogramCNNBlock(nn.Module):
         input = spectrogram_batch.unsqueeze(1)
         output = self.block(input)
         return output
+
+    def calc_output_features_dim(self, in_features: int) -> int:
+        stride_prod = np.prod([stride[0] for stride in self._stride])
+        assert in_features % stride_prod == 0
+        return in_features // stride_prod
 
     @property
     def output_channels_dim(self) -> int:
@@ -159,7 +173,8 @@ class DeepSpeech2(BaseModel):
     def __init__(self, n_feats, n_class, cnn_config: Dict, gru_config: Dict, lookahead_config: Dict):
         super().__init__(n_feats, n_class)
         self.cnn_block = SpectrogramCNNBlock(**cnn_config)
-        num_features_after_cnn = n_feats * self.cnn_block.output_channels_dim
+        cnn_block_output_features_dim = self.cnn_block.calc_output_features_dim(n_feats)
+        num_features_after_cnn = cnn_block_output_features_dim * self.cnn_block.output_channels_dim
         self.gru_block = GRUBlock(num_features_after_cnn, **gru_config)
         self.lookahead = Lookahead(self.gru_block.out_num_features, **lookahead_config)
         self.linear = nn.Linear(self.gru_block.out_num_features, n_class)
@@ -170,7 +185,7 @@ class DeepSpeech2(BaseModel):
         output shape: (batch_dim, time_dim, n_class)
         """
         cnn_output = self.cnn_block(spectrogram)  # (batch_dim, output_channels_dim, n_feats, time_dim)
-        cnn_concat_channels = cnn_output.flatten(-3, -2)  # (batch_dim, output_channels_dim * n_feats, time_dim)
+        cnn_concat_channels = cnn_output.flatten(-3, -2)  # (batch_dim, output_channels_dim * cnn_block_output_features_dim, time_dim)
         gru_output = self.gru_block(cnn_concat_channels)  # (batch_dim, gru_out_num_features, time_dim)
         gru_output_with_lookahead = self.lookahead(gru_output).transpose(-2, -1)  # (batch_dim, time_dim, gru_out_num_features)
         logits = self.linear(gru_output_with_lookahead)  # (batch_dim, time_dim, n_class)
