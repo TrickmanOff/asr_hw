@@ -40,7 +40,7 @@
           "args": {
             "part": "train-clean-100",
             "max_audio_length": 30.0,
-            "max_text_length": 400,
+            "max_text_length": 200,
             "data_dir": "/kaggle/input/librispeech-clean/LibriSpeech",
             "index_dir": "/kaggle/working/indices"
           }
@@ -103,7 +103,7 @@
     "early_stop": 100,
     "visualize": "wandb",
     "wandb_project": "asr_project",
-    "wandb_run": "kaggle_deepspeech2_3+5_steplr",
+    "wandb_run": "kaggle_deepspeech2_1+4",
     "len_epoch": 50,
     "grad_norm_clip": 400,
     "beam_size": 10
