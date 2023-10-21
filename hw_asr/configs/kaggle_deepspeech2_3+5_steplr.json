@@ -1,5 +1,5 @@
 {
-  "name": "kaggle_test_deepspeech2",
+  "name": "kaggle_deepspeech2_3+5_steplr",
   "n_gpu": 1,
   "preprocessing": {
     "sr": 16000,
@@ -33,7 +33,7 @@
   },
   "data": {
     "train": {
-      "batch_size": 20,
+      "batch_size": 128,
       "num_workers": 0,
       "datasets": [
         {
@@ -41,7 +41,7 @@
           "args": {
             "part": "train-clean-100",
             "max_audio_length": 30.0,
-            "max_text_length": 200,
+            "max_text_length": 400,
             "data_dir": "/kaggle/input/librispeech-clean/LibriSpeech",
             "index_dir": "/kaggle/working/indices"
           }
@@ -49,15 +49,13 @@
       ]
     },
     "val": {
-      "batch_size": 20,
+      "batch_size": 128,
       "num_workers": 0,
       "datasets": [
         {
           "type": "LibrispeechDataset",
           "args": {
             "part": "test-clean",
-            "max_audio_length": 30.0,
-            "max_text_length": 200,
             "data_dir": "/kaggle/input/librispeech-clean/LibriSpeech",
             "index_dir": "/kaggle/working/indices"
           }
@@ -68,7 +66,7 @@
   "optimizer": {
     "type": "SGD",
     "args": {
-      "lr": 1e-2
+      "lr": 6e-4
     }
   },
   "loss": {
@@ -90,17 +88,15 @@
     }
   ],
   "lr_scheduler": {
-    "type": "OneCycleLR",
+    "type": "StepLR",
     "args": {
-      "steps_per_epoch": 500,
-      "epochs": 200,
-      "anneal_strategy": "cos",
-      "max_lr": 1e-2,
-      "pct_start": 0.2
+      "step_size": 500,
+      "gamma": 0.8
     }
   },
   "trainer": {
     "epochs": 200,
+    "log_step": 100,
     "save_dir": "saved/",
     "save_period": 5,
     "verbosity": 2,
@@ -108,8 +104,7 @@
     "early_stop": 100,
     "visualize": "wandb",
     "wandb_project": "asr_project",
-    "wandb_run": "kaggle_test_deepspeech2",
-    "len_epoch": 500,
+    "wandb_run": "kaggle_deepspeech2_3+5_steplr",
     "grad_norm_clip": 10,
     "beam_size": 10
   }
