@@ -200,7 +200,8 @@ class DeepSpeech2(BaseModel):
         cnn_output = self.cnn_block(spectrogram)  # (batch_dim, output_channels_dim, n_feats, time_dim)
         cnn_concat_channels = cnn_output.flatten(-3, -2)  # (batch_dim, output_channels_dim * cnn_block_output_features_dim, time_dim)
         gru_output = self.gru_block(cnn_concat_channels)  # (batch_dim, gru_out_num_features, time_dim)
-        gru_output_with_lookahead = self.lookahead(gru_output).transpose(-2, -1)  # (batch_dim, time_dim, gru_out_num_features)
+        # gru_output_with_lookahead = self.lookahead(gru_output).transpose(-2, -1)  # (batch_dim, time_dim, gru_out_num_features)
+        gru_output_with_lookahead = gru_output.transpose(-2, -1)
         logits = self.linear(gru_output_with_lookahead)  # (batch_dim, time_dim, n_class)
         return {"logits": logits}
 
