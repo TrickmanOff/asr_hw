@@ -4,10 +4,12 @@ from typing import List, Optional, Tuple, Union, Dict
 import numpy as np
 import torch
 from torch import Tensor, nn
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 from hw_asr.base.base_model import BaseModel
 
 # TODO: use masked BatchNorm
+from hw_asr.collate_fn.collate import PADDING_VALUE
 
 
 def _broadcast_to_lists(*args, target_length: Optional[int] = None) -> List:
@@ -122,18 +124,23 @@ class GRUBlock(nn.Module):
         self.rnn_layers = nn.ModuleList(rnn_layers)
         self.bn_layers = nn.ModuleList(bn_layers)
 
-    def forward(self, input: Tensor) -> Tensor:
+    def forward(self, input: Tensor, lengths: Tensor) -> Tensor:
         """
         input of shape  (batch_dim, in_num_features, time_dim)
         output of shape (batch_dim, out_num_features, time_dim)
         TODO: use `torch.nn.utils.rnn.pack_padded_sequence()`
         """
         # input shape for RNN block: (batch_dim, time_dim, num_features)
-        prev_output = input.transpose(-2, -1)
+        prev_output_packed = pack_padded_sequence(input.transpose(-2, -1), lengths=lengths,
+                                                  batch_first=True, enforce_sorted=False)
         for rnn_layer, bn_layer in zip(self.rnn_layers, self.bn_layers):
-            prev_output = rnn_layer(prev_output)[0]  # (batch_dim, time_dim, hidden_dim)
+            prev_output_packed = rnn_layer(prev_output_packed)[0]  # (batch_dim, time_dim, hidden_dim)
             if bn_layer is not None:
+                prev_output = pad_packed_sequence(prev_output_packed, batch_first=True, padding_value=PADDING_VALUE)[0]
                 prev_output = bn_layer(prev_output.transpose(-2, -1)).transpose(-2, -1)
+                prev_output_packed = pack_padded_sequence(prev_output, lengths=lengths,
+                                                          batch_first=True, enforce_sorted=False)
+        prev_output = pad_packed_sequence(prev_output_packed, batch_first=True, padding_value=PADDING_VALUE)[0]
         return prev_output.transpose(-2, -1)
 
     @property
@@ -192,14 +199,14 @@ class DeepSpeech2(BaseModel):
         self.lookahead = Lookahead(self.gru_block.out_num_features, **lookahead_config)
         self.linear = nn.Linear(self.gru_block.out_num_features, n_class)
 
-    def forward(self, spectrogram, **batch) -> Union[Tensor, dict]:
+    def forward(self, spectrogram, spectrogram_length, **batch) -> Union[Tensor, dict]:
         """
         input shape:  (batch_dim, n_feats, time_dim)
         output shape: (batch_dim, time_dim, n_class)
         """
         cnn_output = self.cnn_block(spectrogram)  # (batch_dim, output_channels_dim, n_feats, time_dim)
         cnn_concat_channels = cnn_output.flatten(-3, -2)  # (batch_dim, output_channels_dim * cnn_block_output_features_dim, time_dim)
-        gru_output = self.gru_block(cnn_concat_channels)  # (batch_dim, gru_out_num_features, time_dim)
+        gru_output = self.gru_block(cnn_concat_channels, spectrogram_length)  # (batch_dim, gru_out_num_features, time_dim)
         gru_output_with_lookahead = self.lookahead(gru_output).transpose(-2, -1)  # (batch_dim, time_dim, gru_out_num_features)
         logits = self.linear(gru_output_with_lookahead)  # (batch_dim, time_dim, n_class)
         return {"logits": logits}
