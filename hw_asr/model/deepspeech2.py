@@ -130,18 +130,26 @@ class GRUBlock(nn.Module):
         output of shape (batch_dim, out_num_features, time_dim)
         TODO: use `torch.nn.utils.rnn.pack_padded_sequence()`
         """
-        # input shape for RNN block: (batch_dim, time_dim, num_features)
-        prev_output_packed = pack_padded_sequence(input.transpose(-2, -1), lengths=lengths,
-                                                  batch_first=True, enforce_sorted=False)
-        for rnn_layer, bn_layer in zip(self.rnn_layers, self.bn_layers):
-            prev_output_packed = rnn_layer(prev_output_packed)[0]  # (batch_dim, time_dim, hidden_dim)
-            if bn_layer is not None:
-                prev_output = pad_packed_sequence(prev_output_packed, batch_first=True, padding_value=PADDING_VALUE)[0]
-                prev_output = bn_layer(prev_output.transpose(-2, -1)).transpose(-2, -1)
-                prev_output_packed = pack_padded_sequence(prev_output, lengths=lengths,
-                                                          batch_first=True, enforce_sorted=False)
-        prev_output = pad_packed_sequence(prev_output_packed, batch_first=True, padding_value=PADDING_VALUE)[0]
-        return prev_output.transpose(-2, -1)
+        if True:
+            prev_output = input
+            for rnn_layer, bn_layer in zip(self.rnn_layers, self.bn_layers):
+                prev_output = rnn_layer(prev_output.transpose(-2, -1))[0]  # (batch_dim, time_dim, hidden_dim)
+                if bn_layer is not None:
+                    prev_output = bn_layer(prev_output.transpose(-2, -1))
+            return prev_output
+        else:
+            # input shape for RNN block: (batch_dim, time_dim, num_features)
+            prev_output_packed = pack_padded_sequence(input.transpose(-2, -1), lengths=lengths,
+                                                      batch_first=True, enforce_sorted=False)
+            for rnn_layer, bn_layer in zip(self.rnn_layers, self.bn_layers):
+                prev_output_packed = rnn_layer(prev_output_packed)[0]  # (batch_dim, time_dim, hidden_dim)
+                if bn_layer is not None:
+                    prev_output = pad_packed_sequence(prev_output_packed, batch_first=True, padding_value=PADDING_VALUE)[0]
+                    prev_output = bn_layer(prev_output.transpose(-2, -1)).transpose(-2, -1)
+                    prev_output_packed = pack_padded_sequence(prev_output, lengths=lengths,
+                                                              batch_first=True, enforce_sorted=False)
+            prev_output = pad_packed_sequence(prev_output_packed, batch_first=True, padding_value=PADDING_VALUE)[0]
+            return prev_output.transpose(-2, -1)
 
     @property
     def out_num_features(self) -> int:
