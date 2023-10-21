@@ -96,7 +96,7 @@
   },
   "trainer": {
     "epochs": 200,
-    "log_step": 5,
+    "log_step": 50,
     "save_dir": "saved/",
     "save_period": 5,
     "verbosity": 2,

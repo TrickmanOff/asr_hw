@@ -34,7 +34,7 @@ class SpectrogramCNNBlock(nn.Module):
     def __init__(self,
                  output_channels: Union[int, List[int]],
                  filters: Union[int, Tuple[int, int], List[Union[int, Tuple[int, int]]]],
-                 stride: Union[int, Tuple[int, int], List[Union[int, Tuple[int, int]]]] = 1,
+                 stride: Union[int, Tuple[int, int], List[Union[int, Tuple[int, int]]]] = (1, 1),
                  activation_type=nn.ReLU,
                  num_of_layers: Optional[int] = None):
         """
