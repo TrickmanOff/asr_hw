@@ -20,8 +20,7 @@
       "n_feats": 128,
       "cnn_config": {
         "output_channels": [16],
-        "filters": [[41, 11]],
-        "stride": [[2, 1]]
+        "filters": [[41, 11]]
       },
       "gru_config": {
         "hidden_dims": [1024, 1024, 512, 128]
@@ -33,7 +32,7 @@
   },
   "data": {
     "train": {
-      "batch_size": 64,
+      "batch_size": 20,
       "num_workers": 0,
       "datasets": [
         {
@@ -49,7 +48,7 @@
       ]
     },
     "val": {
-      "batch_size": 64,
+      "batch_size": 20,
       "num_workers": 0,
       "datasets": [
         {
