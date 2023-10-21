@@ -3,6 +3,7 @@ from typing import List
 
 import torch
 import torch.nn.functional as F
+from torch.nn.utils.rnn import pad_sequence
 
 
 logger = logging.getLogger(__name__)
@@ -32,16 +33,11 @@ def collate_fn(dataset_items: List[dict]):
     result_batch["audio"] = concat_wave
 
     # spectrogram
-    specs = [item["spectrogram"] for item in dataset_items]
-    specs_lens = torch.tensor([spec.shape[2] for spec in specs])
+    specs = [item["spectrogram"].squeeze(0).T for item in dataset_items]  # each spectrogram - of shape (1, num_features, time_dim)
+    specs_lens = torch.tensor([spec.shape[0] for spec in specs])
     result_batch["spectrogram_length"] = specs_lens
 
-    max_time_dim = max(specs_lens)
-    padded_specs = [
-        F.pad(spec, (0, max_time_dim - spec.shape[2]), value=PADDING_VALUE)
-        for spec in specs
-    ]
-    concat_spec = torch.concat(padded_specs, dim=0)
+    concat_spec = pad_sequence(specs, batch_first=True, padding_value=PADDING_VALUE).transpose(-2, -1)
     result_batch["spectrogram"] = concat_spec
 
     # encoded text
