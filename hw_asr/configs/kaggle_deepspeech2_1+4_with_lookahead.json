@@ -26,7 +26,7 @@
         "hidden_dims": [1024, 1024, 512, 128]
       },
       "lookahead_config": {
-        "future_time": 5
+        "future_time": 80
       }
     }
   },
@@ -103,7 +103,7 @@
     "early_stop": 100,
     "visualize": "wandb",
     "wandb_project": "asr_project",
-    "wandb_run": "kaggle_deepspeech2_1+4_with_lookahead",
+    "wandb_run": "kaggle_deepspeech2_1+4_with_lookahead_80",
     "len_epoch": 50,
     "grad_norm_clip": 400,
     "beam_size": 10
