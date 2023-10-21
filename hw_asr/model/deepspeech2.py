@@ -129,12 +129,12 @@ class GRUBlock(nn.Module):
         TODO: use `torch.nn.utils.rnn.pack_padded_sequence()`
         """
         # input shape for RNN block: (batch_dim, time_dim, num_features)
-        prev_output = input
+        prev_output = input.transpose(-2, -1)
         for rnn_layer, bn_layer in zip(self.rnn_layers, self.bn_layers):
-            prev_output = rnn_layer(prev_output.transpose(-2, -1))[0]  # (batch_dim, time_dim, hidden_dim)
+            prev_output = rnn_layer(prev_output)[0]  # (batch_dim, time_dim, hidden_dim)
             if bn_layer is not None:
-                prev_output = bn_layer(prev_output.transpose(-2, -1))
-        return prev_output
+                prev_output = bn_layer(prev_output.transpose(-2, -1)).transpose(-2, -1)
+        return prev_output.transpose(-2, -1)
 
     @property
     def out_num_features(self) -> int:

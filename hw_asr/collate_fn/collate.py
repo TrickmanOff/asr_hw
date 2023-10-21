@@ -38,7 +38,7 @@ def collate_fn(dataset_items: List[dict]):
     result_batch["spectrogram_length"] = specs_lens
 
     concat_spec = pad_sequence(specs, batch_first=True, padding_value=PADDING_VALUE).transpose(-2, -1)
-    result_batch["spectrogram"] = concat_spec
+    result_batch["spectrogram"] = concat_spec  # of shape (batch_dim, num_features, time_dim)
 
     # encoded text
     encoded_texts = [item["text_encoded"] for item in dataset_items]
