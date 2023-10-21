@@ -48,6 +48,7 @@ class SpectrogramCNNBlock(nn.Module):
         self._stride = stride
 
         input_channels = 1
+        paddings = []
         layers: List[nn.Module] = []
         for in_channels, out_channels, kernel_size, stride in \
                 zip([input_channels] + output_channels[:-1], output_channels, filters, stride):
@@ -57,12 +58,15 @@ class SpectrogramCNNBlock(nn.Module):
             else:  # 2D
                 # input: # (batch_size, in_channels, num_features, time_frames)
                 padding = _calc_padding_for_same(kernel_size=kernel_size)
+                paddings.append(padding)
                 conv_layer = nn.Conv2d(in_channels, out_channels, kernel_size, stride=stride, padding=padding)
                 norm_layer = nn.BatchNorm2d(num_features=out_channels)
                 activation = activation_type()
             layers += [conv_layer, norm_layer, activation]
 
+        self._padding = paddings
         self._output_channels_dim = layers[-3].out_channels
+        self._time_dim_reduction_times = np.prod([stride[1] for stride in self._stride]).item()
         self.block = nn.Sequential(*layers)
 
     def forward(self, spectrogram_batch: Tensor) -> Tensor:
@@ -79,9 +83,18 @@ class SpectrogramCNNBlock(nn.Module):
         assert in_features % stride_prod == 0
         return in_features // stride_prod
 
+    def transform_input_lengths(self, input_lengths):
+        for stride in self._stride:
+            input_lengths = torch.div(input_lengths + stride[1] - 1, stride[1], rounding_mode='trunc')
+        return input_lengths
+
     @property
     def output_channels_dim(self) -> int:
         return self._output_channels_dim
+
+    @property
+    def time_dim_reduction_times(self) -> int:
+        return self._time_dim_reduction_times
 
 
 class GRUBlock(nn.Module):
@@ -192,4 +205,4 @@ class DeepSpeech2(BaseModel):
         return {"logits": logits}
 
     def transform_input_lengths(self, input_lengths):
-        return input_lengths  # we don't reduce time dimension here
+        return self.cnn_block.transform_input_lengths(input_lengths)
