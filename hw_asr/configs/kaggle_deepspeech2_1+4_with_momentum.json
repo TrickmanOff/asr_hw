@@ -1,0 +1,113 @@
+{
+  "name": "kaggle_deepspeech2_1+4",
+  "n_gpu": 1,
+  "preprocessing": {
+    "sr": 16000,
+    "spectrogram": {
+      "type": "MelSpectrogram",
+      "args": {
+      }
+    },
+    "log_spec": true
+  },
+  "augmentations": {
+    "wave": [],
+    "spectrogram": []
+  },
+  "arch": {
+    "type": "DeepSpeech2",
+    "args": {
+      "n_feats": 128,
+      "cnn_config": {
+        "output_channels": [16],
+        "filters": [[41, 11]]
+      },
+      "gru_config": {
+        "hidden_dims": [1024, 1024, 512, 128]
+      },
+      "lookahead_config": {
+        "future_time": 5
+      }
+    }
+  },
+  "data": {
+    "train": {
+      "batch_size": 20,
+      "num_workers": 0,
+      "datasets": [
+        {
+          "type": "LibrispeechDataset",
+          "args": {
+            "part": "train-clean-100",
+            "max_audio_length": 30.0,
+            "max_text_length": 200,
+            "data_dir": "/kaggle/input/librispeech-clean/LibriSpeech",
+            "index_dir": "/kaggle/working/indices"
+          }
+        }
+      ]
+    },
+    "val": {
+      "batch_size": 20,
+      "num_workers": 0,
+      "datasets": [
+        {
+          "type": "LibrispeechDataset",
+          "args": {
+            "part": "test-clean",
+            "data_dir": "/kaggle/input/librispeech-clean/LibriSpeech",
+            "index_dir": "/kaggle/working/indices"
+          }
+        }
+      ]
+    }
+  },
+  "optimizer": {
+    "type": "SGD",
+    "args": {
+      "lr": 6e-4,
+      "momentum": 0.99,
+      "nesterov": true
+    }
+  },
+  "loss": {
+    "type": "CTCLoss",
+    "args": {}
+  },
+  "metrics": [
+    {
+      "type": "ArgmaxWERMetric",
+      "args": {
+        "name": "WER (argmax)"
+      }
+    },
+    {
+      "type": "ArgmaxCERMetric",
+      "args": {
+        "name": "CER (argmax)"
+      }
+    }
+  ],
+  "lr_scheduler": {
+    "type": "StepLR",
+    "args": {
+      "step_size": 3000,
+      "gamma": 0.8
+    }
+  },
+  "trainer": {
+    "epochs": 200,
+    "log_step": 5,
+    "save_dir": "saved/",
+    "save_period": 5,
+    "verbosity": 2,
+    "monitor": "min val_loss",
+    "early_stop": 100,
+    "visualize": "wandb",
+    "wandb_project": "asr_project",
+    "wandb_run": "kaggle_deepspeech2_1+4_with_momentum",
+    "len_epoch": 50,
+    "grad_norm_clip": 400,
+    "beam_size": 10
+  }
+}
