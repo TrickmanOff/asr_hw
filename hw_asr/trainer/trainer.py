@@ -60,6 +60,8 @@ class Trainer(BaseTrainer):
         self.evaluation_metrics = MetricTracker(
             "loss", *[m.name for m in self.metrics], writer=self.writer
         )
+        self.accumulated_grad_steps = 0
+        self.accumulate_grad_steps = config["trainer"].get("accumulate_grad_steps", 1)
 
     @staticmethod
     def move_batch_to_device(batch, device: torch.device):
@@ -135,9 +137,9 @@ class Trainer(BaseTrainer):
 
     def process_batch(self, batch, is_train: bool, metrics: MetricTracker):
         batch = self.move_batch_to_device(batch, self.device)
-        if is_train:
-            self.optimizer.zero_grad()
         outputs = self.model(**batch)
+        if is_train and self.accumulated_grad_steps == 0:
+            self.optimizer.zero_grad()
         if type(outputs) is dict:
             batch.update(outputs)
         else:
@@ -149,11 +151,14 @@ class Trainer(BaseTrainer):
         )
         batch["loss"] = self.criterion(**batch)
         if is_train:
-            batch["loss"].backward()
-            self._clip_grad_norm()
-            self.optimizer.step()
-            if self.lr_scheduler is not None:
-                self.lr_scheduler.step()
+            (batch["loss"] / self.accumulate_grad_steps).backward()
+            self.accumulated_grad_steps += 1
+            if self.accumulated_grad_steps % self.accumulate_grad_steps == 0:
+                self._clip_grad_norm()
+                self.optimizer.step()
+                self.accumulated_grad_steps = 0
+                if self.lr_scheduler is not None:
+                    self.lr_scheduler.step()
 
         metrics.update("loss", batch["loss"].item())
         for met in self.metrics:
