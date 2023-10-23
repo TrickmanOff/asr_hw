@@ -67,7 +67,9 @@
   "optimizer": {
     "type": "SGD",
     "args": {
-      "lr": 6e-4
+      "lr": 1e-3,
+      "momentum": 0.99,
+      "nesterov": true
     }
   },
   "loss": {
@@ -89,13 +91,10 @@
     }
   ],
   "lr_scheduler": {
-    "type": "OneCycleLR",
+    "type": "StepLR",
     "args": {
-      "steps_per_epoch": 500,
-      "epochs": 200,
-      "anneal_strategy": "cos",
-      "max_lr": 1e-2,
-      "pct_start": 0.2
+      "step_size": 400,
+      "gamma": 0.8
     }
   },
   "trainer": {
@@ -108,7 +107,7 @@
     "early_stop": 100,
     "visualize": "wandb",
     "wandb_project": "asr_project",
-    "wandb_run": "kaggle_deepspeech2_3+5_cyclic_with_momentum",
+    "wandb_run": "kaggle_deepspeech2_3+5_1e-3_with_momentum",
     "len_epoch": 50,
     "grad_norm_clip": 400,
     "beam_size": 10
