@@ -23,7 +23,7 @@
         "filters": [[41, 11]]
       },
       "gru_config": {
-        "hidden_dims": [1024, 1024, 512, 128]
+        "hidden_dims": [1024, 1024, 512, 512, 256]
       },
       "lookahead_config": {
         "future_time": 80
@@ -103,7 +103,7 @@
     "early_stop": 100,
     "visualize": "wandb",
     "wandb_project": "asr_project",
-    "wandb_run": "kaggle_deepspeech2_1+4_step_adam",
+    "wandb_run": "kaggle_deepspeech2_1+5_step_adam",
     "len_epoch": 400,
     "grad_norm_clip": 400,
     "beam_size": 10
