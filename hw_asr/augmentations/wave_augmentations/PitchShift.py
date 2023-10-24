@@ -5,8 +5,9 @@ from hw_asr.augmentations.base import AugmentationBase
 
 
 class PitchShift(AugmentationBase):
-    def __init__(self, p: float = 1., *args, **kwargs):
-        self._aug = torch_audiomentations.PitchShift(*args, p=p, **kwargs)
+    def __init__(self, p: float = 1., sample_rate: int = 16_000, *args, **kwargs):
+        self._aug = torch_audiomentations.PitchShift(*args, p=p, sample_rate=sample_rate,
+                                                     **kwargs, output_type='tensor')
 
     def __call__(self, data: Tensor) -> Tensor:
         x = data.unsqueeze(1)

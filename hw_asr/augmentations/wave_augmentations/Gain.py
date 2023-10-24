@@ -6,7 +6,7 @@ from hw_asr.augmentations.base import AugmentationBase
 
 class Gain(AugmentationBase):
     def __init__(self, p: float = 1., *args, **kwargs):
-        self._aug = torch_audiomentations.Gain(*args, p=p, **kwargs)
+        self._aug = torch_audiomentations.Gain(*args, p=p, **kwargs, output_type='tensor')
 
     def __call__(self, data: Tensor):
         x = data.unsqueeze(1)
