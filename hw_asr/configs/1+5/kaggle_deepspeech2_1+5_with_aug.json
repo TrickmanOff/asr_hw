@@ -1,0 +1,139 @@
+{
+  "name": "kaggle_deepspeech2_1+5",
+  "n_gpu": 1,
+  "preprocessing": {
+    "sr": 16000,
+    "spectrogram": {
+      "type": "MelSpectrogram",
+      "args": {
+      }
+    },
+    "log_spec": true
+  },
+  "augmentations": {
+    "wave": [
+      {
+        "type": "Gain",
+        "args": {
+          "p": 0.3
+        }
+      },
+      {
+        "type": "PitchShift",
+        "args": {
+          "p": 0.3
+        }
+      }
+    ],
+    "spectrogram": [
+      {
+        "type": "FrequencyMasking",
+        "args": {
+          "p": 0.3,
+          "freq_mask_param": 24
+        }
+      },
+      {
+        "type": "TimeMasking",
+        "args": {
+          "p": 0.3,
+          "time_mask_param": 50
+        }
+      }
+    ]
+  },
+  "arch": {
+    "type": "DeepSpeech2",
+    "args": {
+      "n_feats": 128,
+      "cnn_config": {
+        "output_channels": [16],
+        "filters": [[41, 11]]
+      },
+      "gru_config": {
+        "hidden_dims": [1024, 1024, 512, 512, 256]
+      },
+      "lookahead_config": {
+        "future_time": 80
+      }
+    }
+  },
+  "data": {
+    "train": {
+      "batch_size": 20,
+      "num_workers": 0,
+      "datasets": [
+        {
+          "type": "LibrispeechDataset",
+          "args": {
+            "part": "train-clean-100",
+            "max_audio_length": 30.0,
+            "max_text_length": 250,
+            "data_dir": "/kaggle/input/librispeech-clean/LibriSpeech",
+            "index_dir": "/kaggle/working/indices"
+          }
+        }
+      ]
+    },
+    "val": {
+      "batch_size": 20,
+      "num_workers": 0,
+      "datasets": [
+        {
+          "type": "LibrispeechDataset",
+          "args": {
+            "part": "test-clean",
+            "data_dir": "/kaggle/input/librispeech-clean/LibriSpeech",
+            "index_dir": "/kaggle/working/indices"
+          }
+        }
+      ]
+    }
+  },
+  "optimizer": {
+    "type": "Adam",
+    "args": {
+      "lr": 6e-4
+    }
+  },
+  "loss": {
+    "type": "CTCLoss",
+    "args": {}
+  },
+  "metrics": [
+    {
+      "type": "ArgmaxWERMetric",
+      "args": {
+        "name": "WER (argmax)"
+      }
+    },
+    {
+      "type": "ArgmaxCERMetric",
+      "args": {
+        "name": "CER (argmax)"
+      }
+    }
+  ],
+  "lr_scheduler": {
+    "type": "StepLR",
+    "args": {
+      "step_size": 1000,
+      "gamma": 0.8
+    }
+  },
+  "trainer": {
+    "epochs": 200,
+    "log_step": 25,
+    "save_dir": "saved/",
+    "save_period": 5,
+    "verbosity": 2,
+    "monitor": "min val_loss",
+    "early_stop": 100,
+    "visualize": "wandb",
+    "wandb_project": "asr_project",
+    "wandb_run": "kaggle_deepspeech2_1+5_aug",
+    "len_epoch": 400,
+    "grad_norm_clip": 400,
+    "beam_size": 10
+  }
+}
