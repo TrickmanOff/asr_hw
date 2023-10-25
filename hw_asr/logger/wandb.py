@@ -86,7 +86,6 @@ class WanDBWriter:
         }, step=self.step)
 
     def add_table(self, table_name, table: pd.DataFrame):
-        table = table.reset_index().rename(columns={'index': 'audio_path'})
         self.wandb.log({self._scalar_name(table_name): wandb.Table(dataframe=table)},
                        step=self.step)
 
@@ -98,3 +97,11 @@ class WanDBWriter:
 
     def add_embedding(self, scalar_name, scalar):
         raise NotImplementedError()
+
+    # for example, to add to dataframes to further log as a table
+    @staticmethod
+    def create_audio(wave: np.ndarray, sample_rate: int = 16_000):
+        """
+        wave - of shape (samples_cnt,)
+        """
+        return wandb.Audio(wave, sample_rate)

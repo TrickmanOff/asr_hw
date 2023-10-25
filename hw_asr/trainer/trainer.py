@@ -212,9 +212,14 @@ class Trainer(BaseTrainer):
             log_probs_length,
             audio_path,
             examples_to_log=10,
+            audio=None,
+            audio_length=None,
             *args,
             **kwargs,
     ):
+        if audio is None:
+            audio = [None] * log_probs.shape[0]
+            audio_length = [None] * log_probs.shape[0]
         # TODO: implement logging of beam search results
         if self.writer is None:
             return
@@ -235,10 +240,12 @@ class Trainer(BaseTrainer):
         beam_search_top_texts_prob = [hypo.prob for hypo in beam_search_top_hypos]
 
         tuples = list(zip(argmax_texts, text, argmax_texts_raw,
-                          beam_search_top_texts, beam_search_top_texts_prob, audio_path))
+                          beam_search_top_texts, beam_search_top_texts_prob, audio_path,
+                          audio, audio_length))
         shuffle(tuples)
         rows = {}
-        for argmax_pred, target, argmax_raw_pred, bs_pred, bs_prob, audio_path in tuples[:examples_to_log]:
+        for argmax_pred, target, argmax_raw_pred, bs_pred, bs_prob, audio_path, audio, audio_length \
+                in tuples[:examples_to_log]:
             target = BaseTextEncoder.normalize_text(target)
             argmax_wer = calc_wer(target, argmax_pred) * 100
             argmax_cer = calc_cer(target, argmax_pred) * 100
@@ -257,7 +264,13 @@ class Trainer(BaseTrainer):
                 "bs wer": bs_wer,
                 "bs cer": bs_cer,
             }
-        self.writer.add_table("predictions", pd.DataFrame.from_dict(rows, orient="index"))
+            if audio is not None:
+                log_audio = self.writer.create_audio(audio.squeeze()[:audio_length],
+                                                     sample_rate=self.config["preprocessing"]["sr"])
+                rows[Path(audio_path).name]["audio"] = log_audio
+        table = pd.DataFrame.from_dict(rows, orient="index")\
+                            .reset_index().rename(columns={'index': 'audio_path'})
+        self.writer.add_table("predictions", table)
 
     def _log_spectrogram(self, spectrogram_batch):
         spectrogram = random.choice(spectrogram_batch.cpu())
