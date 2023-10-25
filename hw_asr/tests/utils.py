@@ -18,5 +18,5 @@ def clear_log_folder_after_use(config_parser: ConfigParser):
             # (if you know how to fix it, you are welcome to make pull request)
             sleep(1)
         else:
-            shutil.rmtree(config_parser.save_dir)
+            config_parser.run_storage.remove_run()
             shutil.rmtree(config_parser.log_dir)

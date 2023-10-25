@@ -7,9 +7,12 @@ from functools import reduce, partial
 from operator import getitem
 from pathlib import Path
 
+from hw_asr import storage as storage_module
 from hw_asr import text_encoder as text_encoder_module
 from hw_asr.base.base_text_encoder import BaseTextEncoder
 from hw_asr.logger import setup_logging
+from hw_asr.storage.experiments_storage import ExperimentsStorage, RunStorage
+from hw_asr.storage.external_storage import ExternalStorage
 from hw_asr.text_encoder import CTCCharTextEncoder
 from hw_asr.utils import read_json, write_json, ROOT_PATH
 
@@ -34,20 +37,25 @@ class ConfigParser:
 
         # set save_dir where trained model and log will be saved.
         save_dir = Path(self.config["trainer"]["save_dir"])
+        experiments_storage = ExperimentsStorage(save_dir / "models")
 
         exper_name = self.config["name"]
         if run_id is None:  # use timestamp as default run-id
             run_id = datetime.now().strftime(r"%m%d_%H%M%S")
-        self._save_dir = str(save_dir / "models" / exper_name / run_id)
+        self._run_storage = experiments_storage.get_run(exper_name, run_id, create_run_if_no=True)
         self._log_dir = str(save_dir / "log" / exper_name / run_id)
+
+        self._external_storage = None if "external_storage" not in self.config["trainer"] else \
+                                 self.init_obj(self.config["trainer"]["external_storage"], storage_module)
 
         # make directory for saving checkpoints and log.
         exist_ok = run_id == ""
-        self.save_dir.mkdir(parents=True, exist_ok=exist_ok)
         self.log_dir.mkdir(parents=True, exist_ok=exist_ok)
 
         # save updated config file to the checkpoint dir
-        write_json(self.config, self.save_dir / "config.json")
+        self.run_storage.save_config(self.config)
+        if self.external_storage is not None:
+            self.external_storage.export_config(self.run_storage)
 
         # configure logging module
         setup_logging(self.log_dir)
@@ -158,12 +166,16 @@ class ConfigParser:
         return self._config
 
     @property
-    def save_dir(self):
-        return Path(self._save_dir)
+    def run_storage(self):
+        return self._run_storage
 
     @property
     def log_dir(self):
         return Path(self._log_dir)
+
+    @property
+    def external_storage(self) -> ExternalStorage:
+        return self._external_storage
 
     @classmethod
     def get_default_configs(cls):

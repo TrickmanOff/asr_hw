@@ -5,6 +5,8 @@ from numpy import inf
 
 from hw_asr.base import BaseModel
 from hw_asr.logger import get_visualizer
+from hw_asr.storage.experiments_storage import RunStorage
+from hw_asr.storage.external_storage import ExternalStorage
 
 
 class BaseTrainer:
@@ -12,7 +14,7 @@ class BaseTrainer:
     Base class for all trainers
     """
 
-    def __init__(self, model: BaseModel, criterion, metrics, optimizer, config, device):
+    def __init__(self, model: BaseModel, criterion, metrics, optimizer, config, device, lr_scheduler=None):
         self.device = device
         self.config = config
         self.logger = config.get_logger("trainer", config["trainer"]["verbosity"])
@@ -21,6 +23,7 @@ class BaseTrainer:
         self.criterion = criterion
         self.metrics = metrics
         self.optimizer = optimizer
+        self.lr_scheduler = lr_scheduler
 
         # for interrupt saving
         self._last_epoch = 0
@@ -45,7 +48,8 @@ class BaseTrainer:
 
         self.start_epoch = 1
 
-        self.checkpoint_dir = config.save_dir
+        self.run_storage: RunStorage = config.run_storage
+        self.external_storage: ExternalStorage = config.external_storage
 
         # setup visualization writer instance
         self.writer = get_visualizer(
@@ -145,14 +149,18 @@ class BaseTrainer:
             "monitor_best": self.mnt_best,
             "config": self.config,
         }
-        filename = str(self.checkpoint_dir / "checkpoint-epoch{}.pth".format(epoch))
+        if self.lr_scheduler is not None:
+            state["lr_scheduler"] = self.lr_scheduler.state_dict()
         if not (only_best and save_best):
-            torch.save(state, filename)
-            self.logger.info("Saving checkpoint: {} ...".format(filename))
+            checkpoint_name = "checkpoint-epoch{}".format(epoch)
+            self.run_storage.save_checkpoint(checkpoint_name, state)
+            if self.external_storage is not None:
+                self.external_storage.export_checkpoint(self.run_storage, checkpoint_name)
         if save_best:
-            best_path = str(self.checkpoint_dir / "model_best.pth")
-            torch.save(state, best_path)
-            self.logger.info("Saving current best: model_best.pth ...")
+            checkpoint_name = "model_best"
+            self.run_storage.save_checkpoint(checkpoint_name, state)
+            if self.external_storage is not None:
+                self.external_storage.export_checkpoint(self.run_storage, checkpoint_name)
 
     def _resume_checkpoint(self, resume_path):
         """
@@ -185,6 +193,8 @@ class BaseTrainer:
             )
         else:
             self.optimizer.load_state_dict(checkpoint["optimizer"])
+            if self.lr_scheduler is not None:
+                self.lr_scheduler.load_state_dict(checkpoint["lr_scheduler"])
 
         self.logger.info(
             "Checkpoint loaded. Resume training from epoch {}".format(self.start_epoch)

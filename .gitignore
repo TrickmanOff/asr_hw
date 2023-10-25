@@ -113,3 +113,7 @@ __MACOSX/
 
 # code for debug
 playground.ipynb
+.DS_Store
+
+# Google Drive
+client_secrets.json
