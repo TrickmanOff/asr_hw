@@ -59,7 +59,7 @@
           "filters": [[41, 11]]
         },
         "gru_config": {
-          "hidden_dims": [512, 512, 512, 512, 512, 512],
+          "hidden_dims": [512, 512, 512, 512, 512, 512, 512],
           "bidirectional": true
         }
       }
