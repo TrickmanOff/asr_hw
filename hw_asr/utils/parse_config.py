@@ -43,6 +43,7 @@ class ConfigParser:
         if run_id is None:  # use timestamp as default run-id
             run_id = datetime.now().strftime(r"%m%d_%H%M%S")
         self._run_storage = experiments_storage.get_run(exper_name, run_id, create_run_if_no=True)
+        self._experiments_storage = experiments_storage
         self._log_dir = str(save_dir / "log" / exper_name / run_id)
 
         self._external_storage = None if "external_storage" not in self.config["trainer"] else \
@@ -168,6 +169,10 @@ class ConfigParser:
     @property
     def run_storage(self):
         return self._run_storage
+
+    @property
+    def experiments_storage(self):
+        return self._experiments_storage
 
     @property
     def log_dir(self):
