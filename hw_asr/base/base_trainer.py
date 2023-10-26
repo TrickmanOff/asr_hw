@@ -154,8 +154,8 @@ class BaseTrainer:
         if not (only_best and save_best):
             checkpoint_name = "checkpoint-epoch{}".format(epoch)
             self.run_storage.save_checkpoint(checkpoint_name, state)
-            if self.external_storage is not None:
-                self.external_storage.export_checkpoint(self.run_storage, checkpoint_name)
+            # if self.external_storage is not None:
+            #     self.external_storage.export_checkpoint(self.run_storage, checkpoint_name)
         if save_best:
             checkpoint_name = "model_best"
             self.run_storage.save_checkpoint(checkpoint_name, state)
