@@ -61,7 +61,7 @@
   },
   "data": {
     "train": {
-      "batch_size": 20,
+      "batch_size": 16,
       "num_workers": 0,
       "datasets": [
         {
@@ -87,7 +87,7 @@
       ]
     },
     "val": {
-      "batch_size": 20,
+      "batch_size": 16,
       "num_workers": 0,
       "datasets": [
         {
@@ -150,7 +150,7 @@
     "visualize": "wandb",
     "wandb_project": "asr_project",
     "wandb_run": "kaggle_deepspeech2_1+5",
-    "len_epoch": 100,
+    "len_epoch": 25,
     "grad_norm_clip": 400,
     "beam_size": 10
   }
