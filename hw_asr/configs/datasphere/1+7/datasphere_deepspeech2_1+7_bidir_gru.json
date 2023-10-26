@@ -73,10 +73,20 @@
             "type": "LibrispeechDataset",
             "args": {
               "part": "train-clean-100",
-              "max_audio_length": 30.0,
+              "max_audio_length": 16.0,
               "max_text_length": 250,
-              "data_dir": "/kaggle/input/librispeech-clean/LibriSpeech",
-              "index_dir": "/kaggle/working/indices"
+              "data_dir": "/home/jupyter/mnt/datasets/librispeech2",
+              "index_dir": "/home/jupyter/work/resources/asr_hw/indices"
+            }
+          },
+          {
+            "type": "LibrispeechDataset",
+            "args": {
+              "part": "train-clean-360",
+              "max_audio_length": 16.0,
+              "max_text_length": 250,
+              "data_dir": "/home/jupyter/mnt/datasets/librispeech2",
+              "index_dir": "/home/jupyter/work/resources/asr_hw/indices"
             }
           }
         ]
@@ -89,8 +99,8 @@
             "type": "LibrispeechDataset",
             "args": {
               "part": "test-clean",
-              "data_dir": "/kaggle/input/librispeech-clean/LibriSpeech",
-              "index_dir": "/kaggle/working/indices"
+              "data_dir": "/home/jupyter/mnt/datasets/librispeech2",
+              "index_dir": "/home/jupyter/work/resources/asr_hw/indices"
             }
           }
         ]
@@ -123,15 +133,15 @@
     "lr_scheduler": {
       "type": "StepLR",
       "args": {
-        "step_size": 1000,
+        "step_size": 10000,
         "gamma": 0.8
       }
     },
     "trainer": {
-      "epochs": 200,
+      "epochs": 400,
       "log_step": 100,
       "save_dir": "saved/",
-      "save_period": 5,
+      "save_period": 1,
       "verbosity": 2,
       "monitor": "min val_loss",
       "early_stop": 100,
