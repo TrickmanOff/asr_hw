@@ -104,23 +104,25 @@ class GRUBlock(nn.Module):
                  in_num_features: int,
                  hidden_dims: Union[int, List[int]],
                  num_of_layers: Optional[int] = None,
-                 use_batch_norm: bool = True):
+                 use_batch_norm: bool = True,
+                 bidirectional: bool = False):
         super().__init__()
 
         hidden_dims, *_ = _broadcast_to_lists(hidden_dims, target_length=num_of_layers)
-
         rnn_layers: List[nn.Module] = []
         bn_layers: List[nn.Module] = []
-        for in_features, hidden_dim in zip([in_num_features] + hidden_dims[:-1], hidden_dims):
-            rnn_layer = nn.GRU(input_size=in_features, hidden_size=hidden_dim, batch_first=True)
+        for layer_index, (in_features, hidden_dim) in enumerate(zip([in_num_features] + hidden_dims[:-1], hidden_dims)):
+            input_size = (1 if layer_index == 0 else (bidirectional + 1)) * in_features
+            rnn_layer = nn.GRU(input_size=input_size, hidden_size=hidden_dim,
+                               batch_first=True, bidirectional=bidirectional)
             rnn_layers.append(rnn_layer)
             if use_batch_norm:
-                bn_layer = nn.BatchNorm1d(hidden_dim)
+                bn_layer = nn.BatchNorm1d((bidirectional + 1) * hidden_dim)
                 bn_layers.append(bn_layer)
         if not use_batch_norm:
             bn_layers = [None] * len(rnn_layers)
 
-        self._out_num_features = hidden_dims[-1]
+        self._out_num_features = (bidirectional + 1) * hidden_dims[-1]
         self.rnn_layers = nn.ModuleList(rnn_layers)
         self.bn_layers = nn.ModuleList(bn_layers)
 
