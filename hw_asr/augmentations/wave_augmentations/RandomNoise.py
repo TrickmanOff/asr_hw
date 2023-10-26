@@ -15,7 +15,7 @@ class RandomNoiseBase(AugmentationBase):
         noise = np.random.normal(size=audio.shape)
         noise /= np.abs(noise).max()  # [-1, 1]
         noised_audio = audio + noise_ampl / np.abs(audio).max() * noise
-        return noised_audio.double()
+        return noised_audio.to(audio.dtype)
 
 
 class RandomNoise(AugmentationBase):
