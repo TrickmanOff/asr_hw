@@ -6,6 +6,7 @@ tensorboard
 matplotlib==3.6.0
 pandas==1.5.1
 
+librosa==0.10.1
 speechbrain~=0.5.12
 datasets==2.9.0
 torch_audiomentations==0.11.0
