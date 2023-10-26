@@ -61,7 +61,7 @@
   },
   "data": {
     "train": {
-      "batch_size": 16,
+      "batch_size": 20,
       "num_workers": 0,
       "datasets": [
         {
@@ -87,7 +87,7 @@
       ]
     },
     "val": {
-      "batch_size": 16,
+      "batch_size": 20,
       "num_workers": 0,
       "datasets": [
         {
@@ -128,13 +128,13 @@
   "lr_scheduler": {
     "type": "StepLR",
     "args": {
-      "step_size": 3000,
+      "step_size": 10000,
       "gamma": 0.8
     }
   },
   "trainer": {
-    "epochs": 200,
-    "log_step": 25,
+    "epochs": 1000,
+    "log_step": 100,
     "save_dir": "saved/",
     "external_storage": {
       "type": "GDriveStorage",
@@ -150,7 +150,7 @@
     "visualize": "wandb",
     "wandb_project": "asr_project",
     "wandb_run": "kaggle_deepspeech2_1+5",
-    "len_epoch": 25,
+    "len_epoch": 400,
     "grad_norm_clip": 400,
     "beam_size": 10
   }
