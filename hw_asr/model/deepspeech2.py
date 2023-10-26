@@ -201,13 +201,16 @@ class Lookahead(nn.Module):
 
 
 class DeepSpeech2(BaseModel):
-    def __init__(self, n_feats, n_class, cnn_config: Dict, gru_config: Dict, lookahead_config: Dict):
+    def __init__(self, n_feats, n_class, cnn_config: Dict, gru_config: Dict, lookahead_config: Dict = None):
         super().__init__(n_feats, n_class)
         self.cnn_block = SpectrogramCNNBlock(**cnn_config)
         cnn_block_output_features_dim = self.cnn_block.calc_output_features_dim(n_feats)
         num_features_after_cnn = cnn_block_output_features_dim * self.cnn_block.output_channels_dim
         self.gru_block = GRUBlock(num_features_after_cnn, **gru_config)
-        self.lookahead = Lookahead(self.gru_block.out_num_features, **lookahead_config)
+        if lookahead_config is not None:
+            self.lookahead = Lookahead(self.gru_block.out_num_features, **lookahead_config)
+        else:
+            self.lookahead = None
         self.linear = nn.Linear(self.gru_block.out_num_features, n_class)
 
     def forward(self, spectrogram, spectrogram_length, **batch) -> Union[Tensor, dict]:
@@ -218,7 +221,10 @@ class DeepSpeech2(BaseModel):
         cnn_output = self.cnn_block(spectrogram)  # (batch_dim, output_channels_dim, n_feats, time_dim)
         cnn_concat_channels = cnn_output.flatten(-3, -2)  # (batch_dim, output_channels_dim * cnn_block_output_features_dim, time_dim)
         gru_output = self.gru_block(cnn_concat_channels, spectrogram_length)  # (batch_dim, gru_out_num_features, time_dim)
-        gru_output_with_lookahead = self.lookahead(gru_output).transpose(-2, -1)  # (batch_dim, time_dim, gru_out_num_features)
+        if self.lookahead is not None:
+            gru_output_with_lookahead = self.lookahead(gru_output).transpose(-2, -1)  # (batch_dim, time_dim, gru_out_num_features)
+        else:
+            gru_output_with_lookahead = gru_output.transpose(-2, -1)
         logits = self.linear(gru_output_with_lookahead)  # (batch_dim, time_dim, n_class)
         return {"logits": logits}
 
