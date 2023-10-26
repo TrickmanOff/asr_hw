@@ -9,7 +9,7 @@ import logging
 import shutil
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Union
 
 from hw_asr.utils.util import write_json
 
@@ -21,7 +21,7 @@ class RunStorage:
     CONFIG_FILENAME = 'config.json'
     CHECKPOINT_EXT = '.pth'
 
-    def __init__(self, exp_name: str, run_name: str, run_dirpath: str | Path):
+    def __init__(self, exp_name: str, run_name: str, run_dirpath: Union[str, Path]):
         self.exp_name = exp_name
         self.run_name = run_name
         self._run_directory = Path(run_dirpath)
@@ -73,7 +73,7 @@ class RunStorage:
 
 
 class ExperimentsStorage:
-    def __init__(self, experiments_dir: str | Path):
+    def __init__(self, experiments_dir: Union[str, Path]):
         self._experiments_dir = Path(experiments_dir)
 
     def get_run(self, exp_name: str, run_name: str, create_run_if_no: bool = False) -> RunStorage:

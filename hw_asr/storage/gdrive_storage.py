@@ -8,7 +8,7 @@ import os
 import shutil
 import tempfile
 from pathlib import Path
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple, List, Union
 
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
@@ -153,7 +153,7 @@ class GDriveStorage(ExternalStorage):
     #             unpacked_filepath = os.path.join(to_dirpath, os.path.basename(downloaded_archive_filepath))
     #             os.rename(unpacked_filepath, os.path.join(to_dirpath, imported_filename))
 
-    def _upload_file(self, to_dir_id: str, to_filename: str, filepath: str | Path) -> None:
+    def _upload_file(self, to_dir_id: str, to_filename: str, filepath: Union[str, Path]) -> None:
         query = f"'{to_dir_id}' in parents and title='{to_filename}' and trashed=false"
         files = self.drive.ListFile({'q': query}).GetList()
         if len(files) != 0:
@@ -165,7 +165,7 @@ class GDriveStorage(ExternalStorage):
         file.SetContentFile(filepath)
         file.Upload()
 
-    def _download_file(self, run_storage: RunStorage, drive_filename: str, to_filepath: str | Path):
+    def _download_file(self, run_storage: RunStorage, drive_filename: str, to_filepath: Union[str, Path]):
         run_drive_dir = self._get_run_dir(run_storage.exp_name, run_storage.run_name)
         query = f'"{run_drive_dir}" in parents and title="{drive_filename}" and trashed=false'
         files = self.drive.ListFile({'q': query}).GetList()
