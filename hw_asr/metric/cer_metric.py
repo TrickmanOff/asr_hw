@@ -17,11 +17,29 @@ class ArgmaxCERMetric(BaseMetric):
         cers = []
         predictions = torch.argmax(log_probs.cpu(), dim=-1).numpy()
         lengths = log_probs_length.detach().numpy()
-        for log_prob_vec, length, target_text in zip(predictions, lengths, text):
+        for predictions_vec, length, target_text in zip(predictions, lengths, text):
             target_text = BaseTextEncoder.normalize_text(target_text)
             if hasattr(self.text_encoder, "ctc_decode"):
-                pred_text = self.text_encoder.ctc_decode(log_prob_vec[:length])
+                pred_text = self.text_encoder.ctc_decode(predictions_vec[:length])
             else:
-                pred_text = self.text_encoder.decode(log_prob_vec[:length])
+                pred_text = self.text_encoder.decode(predictions_vec[:length])
+            cers.append(calc_cer(target_text, pred_text))
+        return sum(cers) / len(cers)
+
+
+class BeamSearchCERMetric(BaseMetric):
+    def __init__(self, text_encoder: BaseTextEncoder, beam_size: int = 100, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.text_encoder = text_encoder
+        self.beam_size = beam_size
+        assert hasattr(self.text_encoder, "ctc_beam_search")
+
+    def __call__(self, log_probs: Tensor, log_probs_length: Tensor, text: List[str], **kwargs):
+        cers = []
+        log_probs = log_probs.detach().to('cpu')
+        lengths = log_probs_length.detach().to('cpu')
+        for log_prob_vec, length, target_text in zip(log_probs, lengths, text):
+            target_text = BaseTextEncoder.normalize_text(target_text)
+            pred_text = self.text_encoder.ctc_beam_search(torch.exp(log_prob_vec), length, beam_size=self.beam_size)
             cers.append(calc_cer(target_text, pred_text))
         return sum(cers) / len(cers)
