@@ -59,7 +59,7 @@ class CTCCharTextEncoder(CharTextEncoder):
                            for i in top_indices]
             hypos = [
                 IndexHypothesis(hypos[hypo_index].inds + [new_ind],
-                                prod_probs[hypo_index, new_ind])
+                                prod_probs[hypo_index, new_ind].item())
                 for hypo_index, new_ind in top_indices
             ]
 
