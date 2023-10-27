@@ -138,6 +138,13 @@
       "log_step": 100,
       "save_dir": "saved/",
       "save_period": 1,
+      "external_storage": {
+          "type": "GDriveStorage",
+          "args": {
+              "storage_dir_id": "1XmURU5KBdxDcP_zFHbe06FSThHYqVy_S",
+              "client_secrets_filepath": "/kaggle/input/gdrive-secrets/client_secrets.json"
+          }
+      },
       "verbosity": 2,
       "monitor": "min val_loss",
       "early_stop": 100,

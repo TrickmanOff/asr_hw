@@ -6,8 +6,10 @@ from pathlib import Path
 import torch
 from tqdm import tqdm
 
+import hw_asr.metric as module_metric
 import hw_asr.model as module_model
-from hw_asr.trainer import Trainer
+from hw_asr.metric.utils import calc_cer, calc_wer
+from hw_asr.trainer import MetricTracker, Trainer
 from hw_asr.utils import ROOT_PATH
 from hw_asr.utils.object_loading import get_dataloaders
 from hw_asr.utils.parse_config import ConfigParser
@@ -42,6 +44,13 @@ def main(config, out_file):
     model = model.to(device)
     model.eval()
 
+    metrics_names = []
+    for decoder_type in ['argmax', 'beam_search', 'bs_with_lm']:
+        for met in ['CER', 'WER']:
+            metrics_names.append(f'{met}_{decoder_type}')
+    metrics_tracker = MetricTracker(*metrics_names)
+    calculated_metrics = set()
+
     results = []
 
     with torch.no_grad():
@@ -63,15 +72,33 @@ def main(config, out_file):
                 argmax = argmax[: int(batch["log_probs_length"][i])]
                 results.append(
                     {
-                        "ground_trurh": batch["text"][i],
+                        "ground_truth": batch["text"][i],
                         "pred_text_argmax": text_encoder.ctc_decode(argmax.cpu().numpy()),
                         "pred_text_beam_search": text_encoder.ctc_beam_search(
-                            batch["probs"][i], batch["log_probs_length"][i], beam_size=100
+                            batch["probs"][i], batch["log_probs_length"][i], beam_size=10
                         )[:10],
                     }
                 )
+
+                ground_truth = batch["text"][i]
+                for pred_name, pred in results[-1].items():
+                    if not pred_name.startswith('pred_text'):
+                        continue
+                    if isinstance(pred, list):
+                        pred = pred[0].text
+                    decoding_type = pred_name.removeprefix('pred_text_')
+                    calculated_metrics.add('CER_' + decoding_type)
+                    metrics_tracker.update('CER_' + decoding_type, calc_cer(ground_truth, pred))
+                    calculated_metrics.add('WER_' + decoding_type)
+                    metrics_tracker.update('WER_' + decoding_type, calc_wer(ground_truth, pred))
+
     with Path(out_file).open("w") as f:
         json.dump(results, f, indent=2)
+
+    for metric_name in metrics_tracker.keys:
+        if metric_name in calculated_metrics:
+            avg_val = metrics_tracker.avg(metric_name)
+            print(f'avg {metric_name}: \t{avg_val:.5f}')
 
 
 if __name__ == "__main__":
@@ -141,7 +168,11 @@ if __name__ == "__main__":
     # update with addition configs from `args.config` if provided
     if args.config is not None:
         with Path(args.config).open() as f:
-            config.config.update(json.load(f))
+            args_config = json.load(f)
+            # override data
+            if "data" in args_config:
+                config.config["data"] = args_config["data"]
+            config.config.update(args_config)
 
     # if `--test-data-folder` was provided, set it as a default test set
     if args.test_data_folder is not None:

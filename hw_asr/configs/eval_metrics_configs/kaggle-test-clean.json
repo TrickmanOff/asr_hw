@@ -1,0 +1,18 @@
+{
+    "data": {
+        "test": {
+            "batch_size": 20,
+            "num_workers": 0,
+            "datasets": [
+                {
+                    "type": "LibrispeechDataset",
+                    "args": {
+                        "part": "test-clean",
+                        "data_dir": "/kaggle/input/librispeech-clean/LibriSpeech",
+                        "index_dir": "/kaggle/working/indices"
+                    }
+                }
+            ]
+        }
+    }
+}
