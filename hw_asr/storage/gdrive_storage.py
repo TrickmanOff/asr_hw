@@ -8,8 +8,9 @@ import os
 import shutil
 import tempfile
 from pathlib import Path
-from typing import Dict, Tuple, List, Union
+from typing import Dict, Tuple, List, Optional, Union
 
+from oauth2client.service_account import ServiceAccountCredentials
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
 
@@ -54,11 +55,21 @@ class GDriveStorage(ExternalStorage):
 
     def __init__(self, storage_dir_id: str,
                  client_secrets_filepath: str = './client_secrets.json',
+                 key_filepath: Optional[str] = None,
                  gauth=None):
         """
         :param storage_dir_id: the id of the GDrive directory where experiments are stored
         """
         super().__init__()
+        if key_filepath is not None:
+            assert gauth is None
+            credentials = ServiceAccountCredentials.from_json_keyfile_name(
+                key_filepath,
+                scopes = ['https://www.googleapis.com/auth/drive.readonly'],
+            )
+            gauth = GoogleAuth()
+            gauth.credentials = credentials
+    
         if gauth is None:
             GoogleAuth.DEFAULT_SETTINGS['client_config_file'] = client_secrets_filepath
             gauth = GoogleAuth()

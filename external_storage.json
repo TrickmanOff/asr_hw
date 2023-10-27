@@ -1,0 +1,9 @@
+{
+    "external_storage": {
+        "type": "GDriveStorage",
+        "args": {
+            "storage_dir_id": "1XmURU5KBdxDcP_zFHbe06FSThHYqVy_S",
+            "key_filepath": "gdrive_models_storage_key.json"
+        }
+    }
+}
