@@ -1,82 +1,115 @@
-# ASR project barebones
+## ДЗ по Automatic Speech Recognition
 
-## Installation guide
+Пайплайн обучения ASR-модели с логированием, сохранением чекпоинтов (в т.ч. и в Google Drive) и вычислением метрик.
+Далее описана процедура запуска предобученной в этом пайплайне модели на произвольных данных.
 
-< Write your installation guide here >
+## Структура репозитория
+- `hw_asr`
+1. `hw_asr/configs`: файлы конфигурации
 
-```shell
-pip install -r ./requirements.txt
+файл конфигурации (JSON) полностью определяет процесс обучения (какая модель берётся, какие данные используютс, как и какие логируются метрики)
+
+2. `hw_asr/tests`: тесты реализации
+
+Можно запустить все командой
+```
+python3 -m unittest discover hw_asr/tests
 ```
 
-## Recommended implementation order
+3. остальные поддиректории: исходный код пайплайна
 
-You might be a little intimidated by the number of folders and classes. Try to follow this steps to gradually undestand
-the workflow.
+- `requirements.txt`: Python-пакеты, необходимые для запуска
 
-1) Test `hw_asr/tests/test_dataset.py`  and `hw_asr/tests/test_config.py` and make sure everythin works for you
-2) Implement missing functions to fix tests in  `hw_asr\tests\test_text_encoder.py`
-3) Implement missing functions to fix tests in  `hw_asr\tests\test_dataloader.py`
-4) Implement functions in `hw_asr\metric\utils.py`
-5) Implement missing function to run `train.py` with a baseline model
-6) Write your own model and try to overfit it on a single batch
-7) Implement ctc beam search and add metrics to calculate WER and CER over hypothesis obtained from beam search.
-8) ~~Pain and suffering~~ Implement your own models and train them. You've mastered this template when you can tune your
-   experimental setup just by tuning `configs.json` file and running `train.py`
-9) Don't forget to write a report about your work
-10) Get hired by Google the next day
+#### Скрипты
 
-## Before submitting
+Подробнее про каждый из них можно узнать, вызвав `python3 {script_name} --help`.
 
-0) Make sure your projects run on a new machine after complemeting the installation guide or by 
-   running it in docker container.
-1) Search project for `# TODO: your code here` and implement missing functionality
-2) Make sure all tests work without errors
-   ```shell
-   python -m unittest discover hw_asr/tests
-   ```
-3) Make sure `test.py` works fine and works as expected. You should create files `default_test_config.json` and your
-   installation guide should download your model checpoint and configs in `default_test_model/checkpoint.pth`
-   and `default_test_model/config.json`.
-   ```shell
-   python test.py \
-      -c default_test_config.json \
-      -r default_test_model/checkpoint.pth \
-      -t test_data \
-      -o test_result.json
-   ```
-4) Use `train.py` for training
+- `train.py`: запуск процедуры обучения из консоли
 
-## Credits
+- `test.py`: запуск оценки сохранённой модели из консоли
 
-This repository is based on a heavily modified fork
-of [pytorch-template](https://github.com/victoresque/pytorch-template) repository.
+- `model_loader.py`: импорт моделей из внешнего хранилища (реализовано только Google Drive)
 
-## Docker
+#### Файлы для импорта моделей из Google Drive:
 
-You can use this project with docker. Quick start:
+Используются в скрипте `model_loader.py`.
 
-```bash 
-docker build -t my_hw_asr_image . 
-docker run \
-   --gpus '"device=0"' \
-   -it --rm \
-   -v /path/to/local/storage/dir:/repos/asr_project_template/data/datasets \
-   -e WANDB_API_KEY=<your_wandb_api_key> \
-	my_hw_asr_image python -m unittest 
+- `gdrive_storage/external_storage.json`: файл конфигурации внешнего хранилища
+- `gdrive_storage/gdrive_models_storage_key.json`: ключ для доступа к Google Drive
+
+## Подготовка к работе пайплайна
+
+<u>Для использования пайплайна необходимо:</u>
+1. Установить все необходимые пакеты:
+```
+pip install -r requirements.txt
+pip install https://github.com/kpu/kenlm/archive/master.zip
 ```
 
-Notes:
+Вторая строка необходима для работы языковой модели KenLM.
 
-* `-v /out/of/container/path:/inside/container/path` -- bind mount a path, so you wouldn't have to download datasets at
-  the start of every docker run.
-* `-e WANDB_API_KEY=<your_wandb_api_key>` -- set envvar for wandb (if you want to use it). You can find your API key
-  here: https://wandb.ai/authorize
+<u>Для загрузки предобученной модели:</u>
 
-## TODO
+1. Необходимо вызвать скрипт с указанием названия нужного запуска (на данный момент - это "kaggle_deepspeech2_1+6:final") и его чекпоинта (на данный момент - это "model_best")
+```
+python3 model_loader.py \
+   --config=asr_hw/external_storage.json \
+   --run=kaggle_deepspeech2_1+6:final \
+   config
+python3 model_loader.py \
+   --config=asr_hw/external_storage.json \
+   --run=kaggle_deepspeech2_1+6:final \
+   checkpoint model_best
+```
 
-These barebones can use more tests. We highly encourage students to create pull requests to add more tests / new
-functionality. Current demands:
+Также с помощью аргумента `-p, --path` можно указать директорию сохранения конфига и чекпоинта (по умолчанию: `saved/models`).
 
-* Tests for beam search
-* README section to describe folders
-* Notebook to show how to work with `ConfigParser` and `config_parser.init_obj(...)`
+В случае каких-либо проблем со стороны API Google Drive загрузить модель можно вручную по [ссылке](https://drive.google.com/drive/folders/1k7JkQV9ZBwQTKEYfJqt78gI5ko6NtYN-?usp=drive_link).
+
+
+## Как обучалась предобученная модель
+
+Вызовом команды
+
+```
+python3 asr_hw/train.py \
+--config=hw_asr/configs/1+6/kaggle_deepspeech2_1+6_bidir_gru.json
+```
+
+**Note**: Повторить это без дополнительных действий не получится, т.к. в конфиге указано сохранение чекпоинтов на Google Drive, для чего использовался файл с ключом и доп. авторизация.
+Достаточно убрать из файла конфигурации запись с "external_storage", чтобы всё заработало.
+
+
+## Как запустить предобученную модель
+
+Для того, чтобы оценить её на датасете, можно задать конфиг с датасетом по аналогии с конфигами из `hw_asr/configs/eval_metrics_configs`.
+
+**Note**: В конфигах `test-clean.json` и `test-other.json` указаны параметры для языковой модели, которые были подобраны по датасету Librispeech dev-clean.
+Предположительно с этими же параметрами результат будет лучше и на других данных.
+
+Далее запуск скрипта `test.py`:
+```
+python3 asr_hw/test.py \
+   --config=asr_hw/hw_asr/configs/eval_metrics_configs/test-other.json \
+   --resume=saved/models/kaggle_deepspeech2_1+6/final/model_best.pth
+```
+
+В результате в терминале напечаются значения метрик CER и WER при разных вариантах декодирования предсказанного текста по вероятностям из модели.
+Также в файл, переданный как аргумент `-o, --output` (по умолчанию- `output.json`) будут записаны предсказания модели вместе с верными ответами из датасета.
+
+Вместо создания отдельного конфигурационного файла просто в качестве аргумента (`-t`, `--test-data-folder`) указать путь до директории, имеющей следующую структуру:
+```
+test_dir
+|-- audio
+|    |-- voice1.[wav|mp3|flac|m4a]
+|    |-- voice2.[wav|mp3|flac|m4a]
+|-- transcriptions
+|    |-- voice1.txt
+|    |-- voice2.txt
+```
+
+## Автор
+
+Егоров Егор:
+- tg: [@TrickmanOff](https://t.me/TrickmanOff)
+- e-mail: yegyegorov@gmail.com
