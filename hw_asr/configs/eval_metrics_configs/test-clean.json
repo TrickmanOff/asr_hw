@@ -1,4 +1,10 @@
 {
+    "text_encoder": {
+        "type": "LibrispeechKenLMCTCCharTextEncoder",
+        "args": {
+            "model": "lowercase_3-gram.pruned.1e-7.arpa"
+        }
+    },
     "data": {
         "test": {
             "batch_size": 20,
@@ -7,9 +13,7 @@
                 {
                     "type": "LibrispeechDataset",
                     "args": {
-                        "part": "test-clean",
-                        "data_dir": "/kaggle/input/librispeech-clean/LibriSpeech",
-                        "index_dir": "/kaggle/working/indices"
+                        "part": "test-clean"
                     }
                 }
             ]

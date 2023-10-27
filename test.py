@@ -2,6 +2,7 @@ import argparse
 import json
 import os
 from pathlib import Path
+from typing import List
 
 import torch
 from tqdm import tqdm
@@ -45,7 +46,7 @@ def main(config, out_file):
     model.eval()
 
     metrics_names = []
-    for decoder_type in ['argmax', 'beam_search', 'bs_with_lm']:
+    for decoder_type in ['argmax', 'beam_search', 'lm_beam_search']:
         for met in ['CER', 'WER']:
             metrics_names.append(f'{met}_{decoder_type}')
     metrics_tracker = MetricTracker(*metrics_names)
@@ -67,6 +68,15 @@ def main(config, out_file):
             )
             batch["probs"] = batch["log_probs"].exp().cpu()
             batch["argmax"] = batch["probs"].argmax(-1)
+            lm_beam_search_text_preds = None
+            if hasattr(text_encoder, "batch_lm_ctc_decode"):
+                    logits_list = [
+                        logits.cpu().numpy()[:int(length)]
+                        for logits, length in zip(batch["logits"], batch["log_probs_length"])
+                    ]
+                    lm_beam_search_text_preds: List[str] = text_encoder.batch_lm_ctc_decode(logits_list)
+                    
+            
             for i in range(len(batch["text"])):
                 argmax = batch["argmax"][i]
                 argmax = argmax[: int(batch["log_probs_length"][i])]
@@ -74,11 +84,16 @@ def main(config, out_file):
                     {
                         "ground_truth": batch["text"][i],
                         "pred_text_argmax": text_encoder.ctc_decode(argmax.cpu().numpy()),
-                        "pred_text_beam_search": text_encoder.ctc_beam_search(
-                            batch["probs"][i], batch["log_probs_length"][i], beam_size=10
-                        )[:10],
+                        # "pred_text_beam_search": text_encoder.ctc_beam_search(
+                        #     batch["probs"][i], batch["log_probs_length"][i], beam_size=10
+                        # )[:10],
+                        # "pred_text_beam_search": text_encoder.ctc_beam_search(
+                        #     batch["probs"][i], batch["log_probs_length"][i], beam_size=10
+                        # )[:100],
                     }
                 )
+                if lm_beam_search_text_preds is not None:
+                    results[-1]["pred_text_lm_beam_search"] = lm_beam_search_text_preds[i]
 
                 ground_truth = batch["text"][i]
                 for pred_name, pred in results[-1].items():
@@ -95,7 +110,7 @@ def main(config, out_file):
     with Path(out_file).open("w") as f:
         json.dump(results, f, indent=2)
 
-    for metric_name in metrics_tracker.keys:
+    for metric_name in metrics_tracker.keys():
         if metric_name in calculated_metrics:
             avg_val = metrics_tracker.avg(metric_name)
             print(f'avg {metric_name}: \t{avg_val:.5f}')
