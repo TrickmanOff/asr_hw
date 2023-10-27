@@ -91,6 +91,13 @@
           }
       },
       {
+          "type": "BeamSearchWERMetric",
+          "args": {
+              "name": "WER (beam search, beam_size=10)",
+              "beam_size": 10
+          }
+      },
+      {
           "type": "ArgmaxCERMetric",
           "args": {
               "name": "CER (argmax)"
@@ -99,8 +106,8 @@
       {
         "type": "BeamSearchCERMetric",
         "args": {
-            "name": "CER (beam search, beam_size=100)",
-            "beam_size": 100
+            "name": "CER (beam search, beam_size=10)",
+            "beam_size": 10
         }
     }
   ],
@@ -113,7 +120,7 @@
   },
   "trainer": {
       "epochs": 200,
-      "log_step": 100,
+      "log_step": 10,
       "save_dir": "saved/",
       "save_period": 1,
       "verbosity": 2,
@@ -121,8 +128,8 @@
       "early_stop": 100,
       "visualize": "wandb",
       "wandb_project": "asr_project",
-      "wandb_run": "kaggle_deepspeech2_1+6_bidir_gru",
-      "len_epoch": 400,
+      "wandb_run": "kaggle_deepspeech2_1+6_bidir_gru_bs_metrics",
+      "len_epoch": 100,
       "grad_norm_clip": 400,
       "beam_size": 10
   }
