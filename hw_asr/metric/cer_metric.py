@@ -6,6 +6,7 @@ from torch import Tensor
 from hw_asr.base.base_metric import BaseMetric
 from hw_asr.base.base_text_encoder import BaseTextEncoder
 from hw_asr.metric.utils import calc_cer
+from hw_asr.text_encoder.ctc_char_text_encoder import Hypothesis
 
 
 class ArgmaxCERMetric(BaseMetric):
@@ -40,6 +41,7 @@ class BeamSearchCERMetric(BaseMetric):
         lengths = log_probs_length.detach().to('cpu')
         for log_prob_vec, length, target_text in zip(log_probs, lengths, text):
             target_text = BaseTextEncoder.normalize_text(target_text)
-            pred_text = self.text_encoder.ctc_beam_search(torch.exp(log_prob_vec), length, beam_size=self.beam_size)
+            hypotheses: List[Hypothesis] = self.text_encoder.ctc_beam_search(torch.exp(log_prob_vec), length, beam_size=self.beam_size)
+            pred_text = hypotheses[0].text
             cers.append(calc_cer(target_text, pred_text))
         return sum(cers) / len(cers)
