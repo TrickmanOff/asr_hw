@@ -54,7 +54,7 @@ def collate_fn(dataset_items: List[dict]):
     result_batch["text_encoded"] = concat_encoded_text
 
     # text
-    texts = [item["text"] for item in dataset_items]
+    texts = [item.get("text", "") for item in dataset_items]
     result_batch["text"] = texts
 
     # audio paths
