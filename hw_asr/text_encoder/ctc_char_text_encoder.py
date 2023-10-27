@@ -54,7 +54,7 @@ class CTCCharTextEncoder(CharTextEncoder):
         for ind_probs in probs[:probs_length]:
             hypos_probs = torch.tensor([hyp.prob for hyp in hypos]).to(device=probs.device)
             prod_probs = hypos_probs.outer(ind_probs)
-            top_indices = prod_probs.flatten().topk(beam_size).indices
+            top_indices = prod_probs.flatten().topk(min(beam_size, prod_probs.numel())).indices
             top_indices = [(i.item() // len(ind_probs), i.item() % len(ind_probs))
                            for i in top_indices]
             hypos = [
