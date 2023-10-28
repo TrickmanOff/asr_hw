@@ -7,6 +7,7 @@ RUN pip install sox && conda install torchaudio==0.11.0 -c pytorch && conda inst
 # Install requirements
 COPY requirements.txt ./
 RUN pip install -r requirements.txt
+RUN pip install https://github.com/kpu/kenlm/archive/master.zip
 
 # Copy the contents of repository
 COPY . .
