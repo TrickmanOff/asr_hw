@@ -1,0 +1,145 @@
+{
+    "name": "datasphere_deepspeech2_1+6_finetuning",
+    "n_gpu": 1,
+    "preprocessing": {
+        "sr": 16000,
+        "spectrogram": {
+            "type": "MelSpectrogram",
+            "args": {}
+        },
+        "log_spec": true
+    },
+    "augmentations": {
+        "wave": [],
+        "spectrogram": []
+    },
+    "arch": {
+        "type": "DeepSpeech2",
+        "args": {
+            "n_feats": 128,
+            "cnn_config": {
+                "output_channels": [
+                    16
+                ],
+                "filters": [
+                    [
+                        41,
+                        11
+                    ]
+                ]
+            },
+            "gru_config": {
+                "hidden_dims": [
+                    512,
+                    512,
+                    512,
+                    512,
+                    512,
+                    512
+                ],
+                "bidirectional": true
+            }
+        }
+    },
+    "data": {
+        "train": {
+            "batch_size": 20,
+            "num_workers": 0,
+            "datasets": [
+                {
+                    "type": "LibrispeechDataset",
+                    "args": {
+                        "part": "train-other-500",
+                        "max_audio_length": 16.0,
+                        "max_text_length": 250,
+                        "data_dir": "/home/jupyter/mnt/datasets/LibriSpeech/LibriSpeech",
+                        "index_dir": "/home/jupyter/work/resources/indices"
+                    }
+                }
+            ]
+        },
+        "test_clean": {
+            "batch_size": 20,
+            "num_workers": 0,
+            "datasets": [
+                {
+                    "type": "LibrispeechDataset",
+                    "args": {
+                        "part": "test-clean",
+                        "data_dir": "/home/jupyter/mnt/datasets/LibriSpeech/LibriSpeech",
+                        "index_dir": "/home/jupyter/work/resources/indices"
+                    }
+                }
+            ]
+        },
+        "test_other": {
+            "batch_size": 20,
+            "num_workers": 0,
+            "datasets": [
+                {
+                    "type": "LibrispeechDataset",
+                    "args": {
+                        "part": "test-other",
+                        "data_dir": "/home/jupyter/mnt/datasets/LibriSpeech/LibriSpeech",
+                        "index_dir": "/home/jupyter/work/resources/indices"
+                    }
+                }
+            ]
+        }
+    },
+    "optimizer": {
+        "type": "Adam",
+        "args": {
+            "lr": 1e-8
+        }
+    },
+    "loss": {
+        "type": "CTCLoss",
+        "args": {}
+    },
+    "metrics": [
+        {
+            "type": "ArgmaxWERMetric",
+            "args": {
+                "name": "WER (argmax)"
+            }
+        },
+        {
+            "type": "ArgmaxCERMetric",
+            "args": {
+                "name": "CER (argmax)"
+            }
+        }
+    ],
+    "lr_scheduler": {
+        "type": "OneCycleLR",
+        "args": {
+          "total_steps": 20001,
+          "anneal_strategy": "cos",
+          "max_lr": 1e-4,
+          "pct_start": 0.2
+        }
+    },
+    "trainer": {
+        "epochs": 200,
+        "log_step": 100,
+        "save_dir": "saved/",
+        "save_period": 1,
+        "external_storage": {
+            "type": "GDriveStorage",
+            "args": {
+                "storage_dir_id": "1XmURU5KBdxDcP_zFHbe06FSThHYqVy_S",
+                "client_secrets_filepath": "/home/jupyter/work/resources/client_secrets.json"
+            }
+        },
+        "verbosity": 2,
+        "monitor": "min test_other_loss",
+        "early_stop": 100,
+        "visualize": "wandb",
+        "wandb_project": "asr_project",
+        "wandb_run": "datasphere_deepspeech2_1+6_finetuning",
+        "len_epoch": 800,
+        "grad_norm_clip": 400,
+        "beam_size": 10
+    }
+}
