@@ -1,5 +1,5 @@
 {
-    "name": "kaggle_deepspeech2_1+6_finetuning",
+    "name": "kaggle_deepspeech2_1+6_finetuning_only_other",
     "n_gpu": 1,
     "preprocessing": {
         "sr": 16000,
@@ -114,7 +114,7 @@
     "lr_scheduler": {
         "type": "OneCycleLR",
         "args": {
-          "total_steps": 20000,
+          "total_steps": 20001,
           "anneal_strategy": "cos",
           "max_lr": 1e-4,
           "pct_start": 0.2
@@ -137,7 +137,7 @@
         "early_stop": 100,
         "visualize": "wandb",
         "wandb_project": "asr_project",
-        "wandb_run": "kaggle_deepspeech2_1+6_finetuning",
+        "wandb_run": "kaggle_deepspeech2_1+6_finetuning_only_other",
         "len_epoch": 800,
         "grad_norm_clip": 10,
         "beam_size": 10
