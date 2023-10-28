@@ -39,7 +39,7 @@ python3 -m unittest discover hw_asr/tests
 
 ## Подготовка к работе пайплайна
 
-Работа пайплайна проверялась на версии Python 3.8.
+Работа пайплайна проверялась на версиях Python 3.8 и 3.10.
 
 <u>Для использования пайплайна необходимо:</u>
 1. Установить все необходимые пакеты:
@@ -52,17 +52,27 @@ pip install https://github.com/kpu/kenlm/archive/master.zip
 
 <u>Для загрузки предобученной модели:</u>
 
-1. Необходимо вызвать скрипт с указанием названия нужного запуска (на данный момент - это "kaggle_deepspeech2_1+6:final") и его чекпоинта (на данный момент - это "model_best")
+1. Необходимо вызвать скрипт с указанием названия нужного запуска и его чекпоинта.
+
+Переменные, используемые в скриптах далее:
+- `EXP="kaggle_deepspeech2_1+6_finetuning"` - имя эксперимента
+- `RUN="finetuned1"` - имя запуска
+- `CHECKPOINT="model_best"` - имя чекпоинта
+
+Представленные значения соответствуют предобученной модели.
+
 ```
 python3 model_loader.py \
    --config=asr_hw/external_storage.json \
-   --run=kaggle_deepspeech2_1+6:final \
+   --run=$EXP:$RUN \
    config
 python3 model_loader.py \
    --config=asr_hw/external_storage.json \
-   --run=kaggle_deepspeech2_1+6:final \
-   checkpoint model_best
+   --run=$EXP:$RUN \
+   checkpoint $CHECKPOINT
 ```
+
+> При запуске скриптов из директории репозитория конфиг `gdrive_storage/external_storage.json` не требуется модифицировать, иначе - нужно обновить в нём путь до файла с ключом
 
 Также с помощью аргумента `-p, --path` можно указать директорию сохранения конфига и чекпоинта (по умолчанию: `saved/models`).
 
@@ -78,7 +88,7 @@ python3 asr_hw/train.py \
 --config=hw_asr/configs/1+6/kaggle_deepspeech2_1+6_bidir_gru.json
 ```
 
-**Note**: Повторить это без дополнительных действий не получится, т.к. в конфиге указано сохранение чекпоинтов на Google Drive, для чего использовался файл с ключом и доп. авторизация.
+> Повторить это без дополнительных действий не получится, т.к. в конфиге указано сохранение чекпоинтов на Google Drive, для чего использовался файл с отдельным ключом и доп. авторизация.
 Достаточно убрать из файла конфигурации запись с "external_storage", чтобы всё заработало.
 
 
@@ -86,14 +96,14 @@ python3 asr_hw/train.py \
 
 Для того, чтобы оценить её на датасете, можно задать конфиг с датасетом по аналогии с конфигами из `hw_asr/configs/eval_metrics_configs`.
 
-**Note**: В конфигах `test-clean.json` и `test-other.json` указаны параметры для языковой модели, которые были подобраны по датасету Librispeech dev-clean.
+> В конфигах `test-clean.json` и `test-other.json` указаны параметры для языковой модели, которые были подобраны по датасету Librispeech dev-clean.
 Предположительно с этими же параметрами результат будет лучше и на других данных.
 
 Далее запуск скрипта `test.py`:
 ```
-python3 asr_hw/test.py \
-   --config=asr_hw/hw_asr/configs/eval_metrics_configs/test-other.json \
-   --resume=saved/models/kaggle_deepspeech2_1+6/final/model_best.pth
+python3 test.py \
+   --config=hw_asr/configs/eval_metrics_configs/test-other.json \
+   --resume=saved/models/$EXP/$RUN/$CHECKPOINT.pth
 ```
 
 В результате в терминале напечаются значения метрик CER и WER при разных вариантах декодирования предсказанного текста по вероятностям из модели.
