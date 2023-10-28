@@ -114,7 +114,7 @@ python3 test.py \
 Далее пример запуска скрипта `test.py`:
 ```
 python3 test.py \
-   --config=hw_asr/configs/eval_metrics_configs/test-other.json \
+   --config=hw_asr/configs/eval_metrics_configs/test-clean.json \
    --resume=saved/models/$EXP/$RUN/$CHECKPOINT.pth
 ```
 
