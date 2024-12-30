@@ -47,10 +47,7 @@ python3 -m unittest discover hw_asr/tests
 1. Установить все необходимые пакеты:
 ```
 pip install -r requirements.txt
-pip install https://github.com/kpu/kenlm/archive/master.zip
 ```
-
-Вторая строка необходима для работы языковой модели KenLM.
 
 <u>Для загрузки предобученной модели:</u>
 
