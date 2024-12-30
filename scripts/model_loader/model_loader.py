@@ -10,6 +10,7 @@ import hw_asr.storage as storage_module
 from hw_asr.storage.experiments_storage import ExperimentsStorage
 from hw_asr.storage.external_storage import ExternalStorage
 from hw_asr.utils.parse_config import ConfigParser
+from hw_asr.utils.util import ROOT_PATH
 
 
 # the best checkpoint
@@ -21,7 +22,7 @@ def parse_args(args=None) -> argparse.Namespace:
     parser.add_argument(
         "-c",
         "--config",
-        default="gdrive_storage/external_storage.json",
+        default=ROOT_PATH / "gdrive_storage" / "external_storage.json",
         type=str,
         help="external storage config file path (default: gdrive storage)",
     )
