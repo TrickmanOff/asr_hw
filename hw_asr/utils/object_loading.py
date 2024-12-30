@@ -52,8 +52,9 @@ def get_dataloaders(configs: ConfigParser, text_encoder: BaseTextEncoder):
             raise Exception()
 
         # Fun fact. An hour of debugging was wasted to write this line
-        assert bs <= len(dataset), \
-            f"Batch size ({bs}) shouldn't be larger than dataset length ({len(dataset)})"
+        if bs > len(dataset):
+            print(f"Batch size ({bs}) is greater than the dataset length ({len(dataset)})")
+            print(f"Batch size was reduced to {len(dataset)}")
 
         # create dataloader
         dataloader = DataLoader(
