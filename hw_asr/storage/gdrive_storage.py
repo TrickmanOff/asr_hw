@@ -17,6 +17,7 @@ from pydrive.drive import GoogleDrive
 
 from hw_asr.storage.experiments_storage import RunStorage
 from hw_asr.storage.external_storage import CheckpointInfo, ExternalStorage, RunInfo
+from hw_asr.utils.util import ROOT_PATH
 
 
 logger = logging.getLogger(__name__)
@@ -58,6 +59,7 @@ class GDriveStorage(ExternalStorage):
         super().__init__()
         if key_filepath is not None:
             assert gauth is None
+            key_filepath = ROOT_PATH / key_filepath
             credentials = ServiceAccountCredentials.from_json_keyfile_name(
                 key_filepath,
                 scopes = ['https://www.googleapis.com/auth/drive.readonly'],
