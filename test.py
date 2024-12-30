@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import List
 
 import torch
+from tabulate import tabulate
 from tqdm import tqdm
 
 import hw_asr.metric as module_metric
@@ -54,6 +55,8 @@ def main(config, out_file):
 
     results = []
 
+    samples_with_transcriptions_cnt = 0
+
     with torch.no_grad():
         for batch_num, batch in enumerate(tqdm(dataloaders["test"])):
             batch = Trainer.move_batch_to_device(batch, device)
@@ -75,8 +78,8 @@ def main(config, out_file):
                         for logits, length in zip(batch["logits"], batch["log_probs_length"])
                     ]
                     lm_beam_search_text_preds: List[str] = text_encoder.batch_lm_ctc_decode(logits_list)
-                    
-            
+
+
             for i in range(len(batch["text"])):
                 argmax = batch["argmax"][i]
                 argmax = argmax[: int(batch["log_probs_length"][i])]
@@ -93,24 +96,35 @@ def main(config, out_file):
                     results[-1]["pred_text_lm_beam_search"] = lm_beam_search_text_preds[i]
 
                 ground_truth = batch["text"][i]
-                for pred_name, pred in results[-1].items():
-                    if not pred_name.startswith('pred_text'):
-                        continue
-                    if isinstance(pred, list):
-                        pred = pred[0].text
-                    decoding_type = pred_name.removeprefix('pred_text_')
-                    calculated_metrics.add('CER_' + decoding_type)
-                    metrics_tracker.update('CER_' + decoding_type, calc_cer(ground_truth, pred))
-                    calculated_metrics.add('WER_' + decoding_type)
-                    metrics_tracker.update('WER_' + decoding_type, calc_wer(ground_truth, pred))
+                if ground_truth:
+                    samples_with_transcriptions_cnt += 1
+                    for pred_name, pred in results[-1].items():
+                        if not pred_name.startswith('pred_text'):
+                            continue
+                        if isinstance(pred, list):
+                            pred = pred[0].text
+                        decoding_type = pred_name.removeprefix('pred_text_')
+                        calculated_metrics.add('CER_' + decoding_type)
+                        metrics_tracker.update('CER_' + decoding_type, calc_cer(ground_truth, pred))
+                        calculated_metrics.add('WER_' + decoding_type)
+                        metrics_tracker.update('WER_' + decoding_type, calc_wer(ground_truth, pred))
 
     with Path(out_file).open("w") as f:
         json.dump(results, f, indent=2)
+    print(f"Generated transcriptions saved to \"{out_file}\"")
 
-    for metric_name in metrics_tracker.keys():
-        if metric_name in calculated_metrics:
-            avg_val = metrics_tracker.avg(metric_name)
-            print(f'avg {metric_name}: \t{avg_val:.5f}')
+    if samples_with_transcriptions_cnt == 0:
+        print("Provide transcriptions to calculate CER and WER.")
+    else:
+        if samples_with_transcriptions_cnt != len(dataloaders["test"].dataset):
+            print(f"Transcriptions provided only for {samples_with_transcriptions_cnt} out of {len(dataloaders['test'].dataset)} samples. "
+                  "CER and WER will be averaged over them.")
+        results_table = []
+        for metric_name in metrics_tracker.keys():
+            if metric_name in calculated_metrics:
+                avg_val = metrics_tracker.avg(metric_name)
+                results_table.append([f'avg {metric_name}', f'{avg_val:.5f}'])
+        print(tabulate(results_table))
 
 
 if __name__ == "__main__":
@@ -182,8 +196,8 @@ if __name__ == "__main__":
         with Path(args.config).open() as f:
             args_config = json.load(f)
             # override data
-            if "data" in args_config:
-                config.config["data"] = args_config["data"]
+            # if "data" in args_config:
+            #     config.config["data"] = args_config["data"]
             config.config.update(args_config)
 
     # if `--test-data-folder` was provided, set it as a default test set
