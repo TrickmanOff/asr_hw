@@ -2,6 +2,7 @@
 Class for importing and exporting models from Google Drive.
 """
 import dataclasses
+import datetime
 import json
 import logging
 import os
@@ -15,7 +16,7 @@ from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
 
 from hw_asr.storage.experiments_storage import RunStorage
-from hw_asr.storage.external_storage import ExternalStorage
+from hw_asr.storage.external_storage import CheckpointInfo, ExternalStorage, RunInfo
 
 
 logger = logging.getLogger(__name__)
@@ -34,12 +35,6 @@ def _archive_file(archive_filepath: str, filepath: str) -> str:
         filename = os.path.basename(filepath)
         shutil.make_archive(archive_filepath, ARCHIVE_FORMAT, root_dir=parent_dir, base_dir=filename)
     return archive_filepath + '.' + ARCHIVE_FORMAT
-
-
-@dataclasses.dataclass
-class RunInfo:
-    checkpoints: List[str]
-    with_config: bool
 
 
 class EnhancedJSONEncoder(json.JSONEncoder):
@@ -69,7 +64,7 @@ class GDriveStorage(ExternalStorage):
             )
             gauth = GoogleAuth()
             gauth.credentials = credentials
-    
+
         if gauth is None:
             GoogleAuth.DEFAULT_SETTINGS['client_config_file'] = client_secrets_filepath
             gauth = GoogleAuth()
@@ -235,7 +230,8 @@ class GDriveStorage(ExternalStorage):
                     run_filename = run_file['title']
                     if run_filename.endswith(self.CHECKPOINT_EXT):
                         checkpoint_name = os.path.splitext(run_filename)[0]
-                        run_info.checkpoints.append(checkpoint_name)
+                        checkpoint = CheckpointInfo(name=checkpoint_name, creation_date=run_file['createdDate'])
+                        run_info.checkpoints.append(checkpoint)
                     elif run_filename == self.CONFIG_FILENAME:
                         run_info.with_config = True
                 exp_runs[run['title']] = run_info

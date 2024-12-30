@@ -49,26 +49,11 @@ python3 -m unittest discover hw_asr/tests
 pip install -r requirements.txt
 ```
 
-<u>Для загрузки предобученной модели:</u>
+<u>Для загрузки весов обученной модели:</u>
 
-1. Необходимо вызвать скрипт с указанием названия нужного запуска и его чекпоинта.
-
-Переменные, используемые в скриптах далее:
-- `EXP="kaggle_deepspeech2_1+6_finetuning"` - имя эксперимента
-- `RUN="finetuned1"` - имя запуска
-- `CHECKPOINT="model_best"` - имя чекпоинта
-
-Представленные значения соответствуют предобученной модели.
-
+Можно использовать скрипт [`model_loader.py](./scripts/model_loader):
 ```
-python3 model_loader.py \
-   --config=gdrive_storage/external_storage.json \
-   --run=$EXP:$RUN \
-   config
-python3 model_loader.py \
-   --config=gdrive_storage/external_storage.json \
-   --run=$EXP:$RUN \
-   checkpoint $CHECKPOINT
+python3 scripts/model_loader/model_loader.py download latest
 ```
 
 > При запуске скриптов из директории репозитория конфиг `gdrive_storage/external_storage.json` не требуется модифицировать, иначе - нужно обновить в нём путь до файла с ключом

@@ -1,3 +1,4 @@
+import dataclasses
 import logging
 from abc import abstractmethod
 
@@ -16,6 +17,18 @@ def try_to_call_function(function, times: int = 3):
         except Exception as e:
             exc = e
     logging.warning(f"Failed to use external storage: {exc}")
+
+
+@dataclasses.dataclass
+class CheckpointInfo:
+    name: str
+    creation_date: str | None = None
+
+
+@dataclasses.dataclass
+class RunInfo:
+    checkpoints: list[CheckpointInfo]
+    with_config: bool
 
 
 class ExternalStorage:
@@ -45,6 +58,11 @@ class ExternalStorage:
 
     @abstractmethod
     def _export_checkpoint(self, run_storage: RunStorage, checkpoint_name: str) -> None:
+        raise NotImplementedError()
+
+    # TODO: add a method to get info about a particular run and use it in `model_loader.py`
+    @abstractmethod
+    def get_available_runs(self) -> dict[str, dict[str, RunInfo]]:
         raise NotImplementedError()
 
     @abstractmethod
