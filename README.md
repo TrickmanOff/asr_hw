@@ -56,8 +56,6 @@ pip install -r requirements.txt
 python3 scripts/model_loader/model_loader.py download latest
 ```
 
-> При запуске скриптов из директории репозитория конфиг `gdrive_storage/external_storage.json` не требуется модифицировать, иначе - нужно обновить в нём путь до файла с ключом
-
 Также с помощью аргумента `-p, --path` можно указать директорию сохранения конфига и чекпоинта (по умолчанию: `saved/models`).
 
 В случае каких-либо проблем со стороны API Google Drive загрузить модель можно вручную по [ссылке](https://drive.google.com/drive/folders/1k7JkQV9ZBwQTKEYfJqt78gI5ko6NtYN-?usp=drive_link).
