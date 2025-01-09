@@ -51,15 +51,14 @@ pip install -r requirements.txt
 
 <u>Для загрузки весов обученной модели:</u>
 
-Можно использовать скрипт [`model_loader.py](./scripts/model_loader):
+Можно использовать скрипт [`model_loader.py`](./scripts/model_loader):
 ```
-python3 scripts/model_loader/model_loader.py download latest
+python3 scripts/model_loader/model_loader.py download best
 ```
 
 Также с помощью аргумента `-p, --path` можно указать директорию сохранения конфига и чекпоинта (по умолчанию: `saved/models`).
 
 В случае каких-либо проблем со стороны API Google Drive загрузить модель можно вручную по [ссылке](https://drive.google.com/drive/folders/1k7JkQV9ZBwQTKEYfJqt78gI5ko6NtYN-?usp=drive_link).
-
 
 ## Как обучалась предобученная модель
 
@@ -78,8 +77,7 @@ python3 test.py \
 ```
 , где $RUN_NAME - имя запуска в первом случае
 
-> Повторить это без дополнительных действий не получится, т.к. в конфиге указано сохранение чекпоинтов на Google Drive, для чего локально использовался отдельный файл с ключом и доп. авторизация в аккаунт.
-Достаточно убрать из файла конфигурации запись с "external_storage", чтобы всё заработало без экспортирования чекпоинтов на Google Drive.
+> В конфиге указано сохранение чекпоинтов на Google Drive (секция "external storage"). Чтобы использовать его для своего личного аккаунта, следуйте инструкциям [отсюда](docs/gdrive_storage.md#access-to-a-personal-google-drive). Также можно отключить экспорт чекпоинтов на Google Drive, удалив из конфига обучения секцию "external storage".
 
 **TODO**: добавить инструкцию по экспорту чекпоинтов на Google Drive через `gdrive_storage`
 

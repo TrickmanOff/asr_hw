@@ -14,7 +14,10 @@ from hw_asr.utils.util import ROOT_PATH
 
 
 # the best checkpoint
-LATEST_RUN_NAME = "kaggle_deepspeech2_1+6_finetuning:finetuned1"
+BEST_CHECKPOINT = {
+    "run": "kaggle_deepspeech2_1+6_finetuning:finetuned1",
+    "checkpoint": "model_best"
+}
 
 
 def parse_args(args=None) -> argparse.Namespace:
@@ -43,13 +46,13 @@ def parse_args(args=None) -> argparse.Namespace:
         "-r",
         "--run",
         type=str,
-        default="latest",
-        help="run to load in format '{exp_name}:{run_name}' or 'latest'",
+        default=None,
+        help="run to download in format '{exp_name}:{run_name}'",
     )
     download_parser.add_argument(
         "checkpoints",
         nargs='*',
-        help="'{checkpoint_name}', or 'latest'; config will always be downloaded"
+        help="checkpoints to download in format '{checkpoint_name}', 'latest', or 'best' (config will always be downloaded even if no checkpoints are specified)"
     )
 
     return parser.parse_args()
@@ -81,23 +84,34 @@ if __name__ == "__main__":
             }
         }, indent=4))
         print(external_storage.list_content())
-    else:
+    elif args.command == "download":
         exps_storage = ExperimentsStorage(args.path)
+        checkpoints = set(args.checkpoints)
+        if len(checkpoints) != len(args.checkpoints):
+            print("Specifying duplicate checkpoints will have no effect.")
 
-        if args.run == "latest":
-            args.run = LATEST_RUN_NAME
+        if "best" in checkpoints:
+            assert args.run is None, "Do not pass \"--run\" if you want to download the best checkpoint as the run for the best checkpoint is hardcoded."
+            assert len(checkpoints) == 1, f"The \"best\" checkpoint should be the only one specified for download (while you passed {len(checkpoints)} checkpoints)."
+            args.run = BEST_CHECKPOINT["run"]
+            checkpoints = [BEST_CHECKPOINT["checkpoint"]]
+
+        if args.run is None:
+            raise RuntimeError("Pass the run name via the \"--run\" argument or run `python3 model_loader.py download best` to download the best checkpoint.")
 
         exp_name, run_name = args.run.split(':')
         run_storage = exps_storage.get_run(exp_name, run_name, create_run_if_no=True)
 
-        if "latest" in args.checkpoints:
+        if "latest" in checkpoints:
             run_checkpoints = external_storage.get_available_runs()[exp_name][run_name].checkpoints
+            if any(checkpoint.creation_date is None for checkpoint in run_checkpoints):
+                raise RuntimeError("Cannot determine the latest checkpoint because some checkpoints for the run do not have the creation date.")
             latest_checkpoint = run_checkpoints[0]
             for checkpoint in run_checkpoints:
                 if checkpoint.creation_date > latest_checkpoint.creation_date:
                     latest_checkpoint = checkpoint
-            latest_index = args.checkpoints.index("latest")
-            args.checkpoints[latest_index] = latest_checkpoint.name
+            latest_index = checkpoints.index("latest")
+            checkpoints[latest_index] = latest_checkpoint.name
 
         if not os.path.exists(run_storage.get_config_filepath()):
             print(f'Loading config for run "{run_storage.get_run_id()}"...')
@@ -107,10 +121,12 @@ if __name__ == "__main__":
             print(f'Config for run "{run_storage.get_run_id()}" already loaded')
 
         local_checkpoints = run_storage.get_checkpoints_filepaths()
-        for checkpoint_name in args.checkpoints:
+        for checkpoint_name in checkpoints:
             if checkpoint_name not in local_checkpoints:
                 print(f'Loading checkpoint "{checkpoint_name}" for run "{run_storage.get_run_id()}"...')
                 external_storage.import_checkpoint(run_storage, checkpoint_name)
                 print(f'Successfully loaded checkpoint "{checkpoint_name}" for run "{run_storage.get_run_id()}" to "{run_storage.get_checkpoints_filepaths()[checkpoint_name]}"')
             else:
                 print(f'Checkpoint "{checkpoint_name}" for run "{run_storage.get_run_id()}" already loaded to "{run_storage.get_checkpoints_filepaths()[checkpoint_name]}"')
+    else:
+        raise RuntimeError(f'Command "{args.command}" is not supported.')

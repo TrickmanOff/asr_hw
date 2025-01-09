@@ -117,4 +117,5 @@ ExternalStorageDemo.ipynb
 .DS_Store
 
 # Google Drive
-client_secrets.json
+*secret*.json
+*credentials*.json

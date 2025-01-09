@@ -78,7 +78,7 @@
     "external_storage": {
       "type": "GDriveStorage",
       "args": {
-        "storage_dir_id": "1XmURU5KBdxDcP_zFHbe06FSThHYqVy_S"
+        "storage_folder_id": "1XmURU5KBdxDcP_zFHbe06FSThHYqVy_S"
       }
     },
     "save_period": 1,

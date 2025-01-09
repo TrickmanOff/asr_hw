@@ -138,8 +138,8 @@
         "external_storage": {
             "type": "GDriveStorage",
             "args": {
-                "storage_dir_id": "1XmURU5KBdxDcP_zFHbe06FSThHYqVy_S",
-                "client_secrets_filepath": "/kaggle/input/gdrive-secrets/client_secrets.json"
+                "storage_folder_id": "1XmURU5KBdxDcP_zFHbe06FSThHYqVy_S",
+                "client_credentials_filepath": "/kaggle/input/gdrive-secrets/client_secrets.json"
             }
         },
         "verbosity": 2,

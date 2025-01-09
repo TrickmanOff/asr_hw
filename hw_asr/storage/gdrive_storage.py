@@ -3,11 +3,14 @@ Class for importing and exporting models from Google Drive.
 """
 import dataclasses
 import datetime
+import hashlib
 import json
 import logging
 import os
+import re
 import shutil
 import tempfile
+import urllib
 from pathlib import Path
 from typing import Dict, Tuple, List, Optional, Union
 
@@ -17,12 +20,13 @@ from pydrive.drive import GoogleDrive
 
 from hw_asr.storage.experiments_storage import RunStorage
 from hw_asr.storage.external_storage import CheckpointInfo, ExternalStorage, RunInfo
-from hw_asr.utils.util import ROOT_PATH
+from hw_asr.utils.util import ROOT_PATH, download_file
 
 
 logger = logging.getLogger(__name__)
 
 ARCHIVE_FORMAT = 'zip'
+SERVICE_ACCOUNT_CREDENTIALS_URL = 'https://drive.google.com/uc?export=download&id=1stvKJB9Kuoh9vbpeBlGfBI5foHIGtmME'
 
 
 def _archive_file(archive_filepath: str, filepath: str) -> str:
@@ -38,6 +42,32 @@ def _archive_file(archive_filepath: str, filepath: str) -> str:
     return archive_filepath + '.' + ARCHIVE_FORMAT
 
 
+# It is a little more secure than storing credentials directly in the repository.
+# Also, most importantly, it helps to avoid service account freeze by Google due to automatic credentials leakage checks.
+def get_or_load_service_account_credentials(url: str) -> str:
+    """
+    :return: filepath with downloaded service account credentials
+    """
+    # getting URL hash
+    h = hashlib.sha1()
+    h.update(url.encode('utf-8'))
+    url_hash = h.hexdigest()[:10]
+    credentials_filepath = f'service_account_credentials_{url_hash}.json'
+    if os.path.exists(credentials_filepath):
+        print(f'Already downloaded service account credentials "{credentials_filepath}" will be used')
+    else:
+        print(f'Downloading service account credentials: "{url}" -> "{credentials_filepath}"')
+        download_file(url, to_filename=credentials_filepath)
+    return credentials_filepath
+
+
+def extract_auth_code_from_url(url: str) -> str:
+    pattern = '\?code=(.*)\&'
+    match = re.search(pattern, url)
+    auth_code = match.groups()[0]
+    return urllib.parse.unquote(auth_code)
+
+
 class EnhancedJSONEncoder(json.JSONEncoder):
     def default(self, o):
         if dataclasses.is_dataclass(o):
@@ -49,34 +79,66 @@ class GDriveStorage(ExternalStorage):
     CONFIG_FILENAME = 'config.json'
     CHECKPOINT_EXT = '.pth'
 
-    def __init__(self, storage_dir_id: str,
-                 client_secrets_filepath: str = './client_secrets.json',
-                 key_filepath: Optional[str] = None,
+    def __init__(self, storage_folder_id: str,
+                 client_credentials_filepath: str = './client_secrets.json',
+                 service_account_key_filepath: Optional[str] = SERVICE_ACCOUNT_CREDENTIALS_URL,
+                 save_credentials: bool = True,
                  gauth=None):
         """
-        :param storage_dir_id: the id of the GDrive directory where experiments are stored
+        :param storage_folder_id: the id of the Google Drive folder where experiments are stored.
+            It can be obtained from a URL: https://drive.google.com/drive/u/1/folders/<folder_id>
+        :param client_credentials_filepath: path to the file with OAuth client credentials (id and secret).
+            These credentials are used to obtain an access token through user authentication.
+        :param service_account_key_filepath: path to the JSON file with service account credentials.
+            These credentials are used to obtain an access token. Passing a URL is supported.
         """
         super().__init__()
-        if key_filepath is not None:
+        if service_account_key_filepath is not None:
             assert gauth is None
-            key_filepath = ROOT_PATH / key_filepath
+            if os.path.exists(service_account_key_filepath):
+                pass
+            elif os.path.exists(ROOT_PATH / service_account_key_filepath):
+                service_account_key_filepath = ROOT_PATH / service_account_key_filepath
+            else:
+                service_account_key_filepath = get_or_load_service_account_credentials(service_account_key_filepath)
+
             credentials = ServiceAccountCredentials.from_json_keyfile_name(
-                key_filepath,
+                service_account_key_filepath,
                 scopes = ['https://www.googleapis.com/auth/drive.readonly'],
             )
             gauth = GoogleAuth()
             gauth.credentials = credentials
 
         if gauth is None:
-            GoogleAuth.DEFAULT_SETTINGS['client_config_file'] = client_secrets_filepath
+            # TODO: think of a cleaner solution
+            # this code leads to saving and loading an access token after authenticating once in order to avoid manual authentication each time
+            GoogleAuth.DEFAULT_SETTINGS['client_config_file'] = client_credentials_filepath
+            GoogleAuth.DEFAULT_SETTINGS['save_credentials'] = save_credentials
+            GoogleAuth.DEFAULT_SETTINGS['save_credentials_backend'] = 'file'
+            save_credentials_file = Path(client_credentials_filepath)
+            save_credentials_file = save_credentials_file.with_stem(save_credentials_file.stem + '_auth')
+            GoogleAuth.DEFAULT_SETTINGS['save_credentials_file'] = save_credentials_file
+
             gauth = GoogleAuth()
-            url = gauth.GetAuthUrl()
-            print(f'Visit the url:\n{url}')
-            code = input('Enter the code')
-            gauth.Auth(code)
+            if save_credentials and save_credentials_file.exists():
+                gauth.LoadCredentials()
+            # Create local webserver and handle authentication automatically
+            # gauth.LocalWebserverAuth()
+            if gauth.access_token_expired:
+                msg = 'No prior authentication.' if gauth.credentials is None else 'Access token expired.'
+                msg += ' Authentication required.'
+                print(msg)
+
+                url = gauth.GetAuthUrl()
+                print(f'Visit the url:\n{url}')
+                redirected_url = input('Enter the url you were redirected to after authentication:\n')
+                auth_code = extract_auth_code_from_url(redirected_url)
+                gauth.Auth(auth_code)
+                if save_credentials:
+                    gauth.SaveCredentialsFile(save_credentials_file)
             # gauth.CommandLineAuth()
         self.drive = GoogleDrive(gauth)
-        self.storage_dir_id = storage_dir_id
+        self.storage_folder_id = storage_folder_id
 
     # def _get_part_name(self, part: ModelParts):
     #     if part not in self.PARTS_NAMES:
@@ -129,7 +191,7 @@ class GDriveStorage(ExternalStorage):
         Creates if it does not exist
         :return: id
         """
-        return self._get_subdir(parent_dir_id=self.storage_dir_id, subdir_name=exp_name)
+        return self._get_subdir(parent_dir_id=self.storage_folder_id, subdir_name=exp_name)
 
     def _get_run_dir(self, exp_name: str, run_name: str) -> str:
         """
@@ -216,7 +278,7 @@ class GDriveStorage(ExternalStorage):
 
     def get_available_runs(self) -> Dict[str, Dict[str, RunInfo]]:
         exps_list = self.drive.ListFile(
-            {'q': f"'{self.storage_dir_id}' in parents and trashed=false"}).GetList()
+            {'q': f"'{self.storage_folder_id}' in parents and trashed=false"}).GetList()
 
         res = {}
 
@@ -249,7 +311,7 @@ class GDriveStorage(ExternalStorage):
         with tempfile.TemporaryDirectory() as archive_dir:
             downloaded_archive_filepath = os.path.join(archive_dir,
                                                        model_name + '.' + ARCHIVE_FORMAT)
-            query = f'"{self.storage_dir_id}" in parents and title="{model_name}.{ARCHIVE_FORMAT}" and trashed=false'
+            query = f'"{self.storage_folder_id}" in parents and title="{model_name}.{ARCHIVE_FORMAT}" and trashed=false'
             archive_file = self.drive.ListFile({'q': query}).GetList()[0]
             archive_file.GetContentFile(downloaded_archive_filepath)
 

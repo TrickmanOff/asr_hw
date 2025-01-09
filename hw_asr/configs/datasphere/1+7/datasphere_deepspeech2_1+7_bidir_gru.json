@@ -144,8 +144,8 @@
       "external_storage": {
         "type": "GDriveStorage",
         "args": {
-            "storage_dir_id": "1XmURU5KBdxDcP_zFHbe06FSThHYqVy_S",
-            "client_secrets_filepath": "client_secrets.json"
+            "storage_folder_id": "1XmURU5KBdxDcP_zFHbe06FSThHYqVy_S",
+            "client_credentials_filepath": "client_secrets.json"
         }
       },
       "save_period": 1,
@@ -160,4 +160,3 @@
       "beam_size": 10
     }
   }
-  
