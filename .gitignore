@@ -119,3 +119,9 @@ ExternalStorageDemo.ipynb
 # Google Drive
 *secret*.json
 *credentials*.json
+
+# inference output
+output.json
+
+# language model
+lms
