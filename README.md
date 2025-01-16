@@ -1,64 +1,65 @@
-# Проект по Automatic Speech Recognition
+![](https://img.shields.io/badge/python-3.10-blue.svg)
 
-Работа выполнена в рамках курса по глубинному обучению в обработке звука: [задание](https://github.com/markovka17/dla/tree/2024/hw1_asr).
+[The original README in Russian](./README_ru.md)
 
-Пайплайн обучения ASR-модели с логированием, сохранением чекпоинтов (в т.ч. и в Google Drive) и вычислением метрик.
-Далее описана процедура запуска предобученной в этом пайплайне модели на произвольных данных, а также воспроизведения этой модели.
+# Automatic Speech Recognition Project
 
-Была использована архитектура [DeepSpeech 2](https://arxiv.org/abs/1512.02595), однако пайплайн может использоваться и для других архитектур.
+This project was completed as part of the deep learning course in audio processing: [assignment](https://github.com/markovka17/dla/tree/2024/hw1_asr).
 
-## Подготовка
+This repository includes a training pipeline for ASR models with logging, checkpoint saving (including Google Drive support), and metrics calculation. The following describes how to run a pre-trained model from this pipeline on arbitrary data and how to reproduce it.
 
-Код проверялся на версии Python 3.10.
+The [DeepSpeech 2](https://arxiv.org/abs/1512.02595) architecture was used, but the pipeline can also be applied to other architectures.
 
-Предварительно необходимо установить все необходимые пакеты:
-```
+You can find detailed experiment logs, metrics, and inference samples in the [WandB report](https://wandb.ai/trickman/asr_project/reports/ASR-HW--VmlldzoxMDQwODgwMQ).
+
+## Preparation
+
+The code was tested with Python 3.10.
+
+First, install all required packages:
+```bash
 pip install -r requirements.txt
 ```
 
-## Запуск обученной модели
+## Running the Pre-Trained Model
 
-### Загрузка весов
+### Loading Weights
 
-Для загрузки весов можно использовать скрипт [model_loader.py](./scripts/model_loader):
-```
+To load the weights, you can use the script [model_loader.py](./scripts/model_loader):
+```bash
 python3 scripts/model_loader/model_loader.py download best
 ```
-В результате будет загружен лучший чекпоинт, выбранный среди ряда экспериментов:
+This will download the best checkpoint selected from a series of experiments:
 
 |                         | CER    | WER    |
 |-------------------------|--------|--------|
 | LibriSpeech: test-clean | 0.0703 | 0.1605 |
 | LibriSpeech: test-other | 0.1904 | 0.3595 |
 
-> Метрики были вычислены при использовании beam search + LM для генерации текста по выходам модели
+> Metrics were calculated using beam search with a language model for generating text from model outputs.
 
-Также с помощью аргумента `-p, --path` можно указать директорию сохранения чекпоинта (по умолчанию: `saved/models`).
+You can also specify a custom directory for saving the checkpoint using the `-p, --path` argument (default: `saved/models`).
 
-В случае каких-либо проблем со стороны API Google Drive загрузить модель можно вручную по [ссылке](https://drive.google.com/drive/folders/1k7JkQV9ZBwQTKEYfJqt78gI5ko6NtYN-?usp=drive_link).
+If there are any issues with the Google Drive API, the model can be downloaded manually via [this link](https://drive.google.com/drive/folders/1k7JkQV9ZBwQTKEYfJqt78gI5ko6NtYN-?usp=drive_link) or [this one](https://disk.yandex.ru/d/oE_i4O-2daqYKQ).
 
-### Инференс модели
+### Model Inference
 
-Для инференса можно использовать скрипт [`test.py`](test.py), в котором:
+For inference, use the script [`test.py`](test.py), where:
 
-- Аргумент `-r, --resume`: путь до используемого чекпоинта модели.
-> При загрузке чекпоинта с помощью `model_loader.py` полный путь до чекпоинта выводится в консоль
+- Argument `-r, --resume`: path to the model checkpoint.
+> The full path to the checkpoint is displayed in the console when using `model_loader.py`.
 
-- Аргумент `-c, --config`: путь до дополнительного конфига (конфиг инференса).\
-\
-Основной конфиг возьмётся из той же директории, что и указанный чекпоинт.
-Итоговый конфиг берётся как основной, объединённый с дополнительным (в случае одинаковых полей берётся значение из дополнительного конфига).\
-\
-В конфиге инференса указываются параметры инференса, например, языковая модель, используемая для генерации текста по выходным логитам модели, и размер батча, а также, возможно, данные, на которых осуществляется инференс.
-Примеры таких конфигов можно найти в [`hw_asr/configs/eval_metrics_configs`](hw_asr/configs/eval_metrics_configs).
+- Argument `-c, --config`: path to an additional config file (inference configuration).\
+  The main config will be taken from the same directory as the specified checkpoint.\
+  The final config is the main one combined with the additional one (fields in the additional config take precedence).\
+  The inference config specifies parameters such as the language model used for text generation from the model's logits and the batch size, as well as optionally the data for inference. Examples of such configs can be found in [`hw_asr/configs/eval_metrics_configs`](hw_asr/configs/eval_metrics_configs).
 
-> В конфигах [`test-clean.json`](hw_asr/configs/eval_metrics_configs/test-clean.json) и [`test-other.json`](hw_asr/configs/eval_metrics_configs/test-other.json) указаны параметры для языковой модели, используемой для декодирования, которые были подобраны по датасету Librispeech dev-clean.
-Предположительно, с этими же параметрами результат будет лучше и на других данных.
+> In the configs [`test-clean.json`](hw_asr/configs/eval_metrics_configs/test-clean.json) and [`test-other.json`](hw_asr/configs/eval_metrics_configs/test-other.json), parameters for the language model used for decoding are provided, optimized for the LibriSpeech dev-clean dataset. These parameters are expected to perform well on other datasets as well.
 
-Данные, на которых нужно осуществить инференс (распознавание речи), можно указать:
-- в качестве датасета в конфиге инференса, как, например, в [`test-clean.json`](hw_asr/configs/eval_metrics_configs/test-clean.json) (поддерживаемые датасеты можно найти [тут](hw_asr/datasets))
-- с помощью аргумента (`-t`, `--test-data-folder`), указав путь до директории, имеющей следующую структуру:
-```
+Data for speech recognition inference can be specified:
+- As a dataset in the inference config, e.g., [`test-clean.json`](hw_asr/configs/eval_metrics_configs/test-clean.json) (supported datasets can be found [here](hw_asr/datasets)).
+- Using the `-t, --test-data-folder` argument, pointing to a directory with the following structure:
+```plaintext
 test_dir
 |-- audio
 |    |-- voice1.[wav|mp3|flac|m4a]
@@ -68,109 +69,70 @@ test_dir
 |    |-- voice2.txt
 ```
 
-Файлы в поддиректории `transcriptions`, как и сама эта директория, являются опциональными и нужны лишь для подсчёта CER и WER.
+The `transcriptions` subdirectory and its files are optional and are only needed for calculating CER and WER.
 
-Пример запуска на датасете Librispeech (test-clean):
-```
+Example run on the LibriSpeech dataset (test-clean):
+```bash
 python3 test.py \
    --config=hw_asr/configs/eval_metrics_configs/test-clean.json \
    --resume=saved/models/$EXP/$RUN/$CHECKPOINT.pth
 ```
 
-Пример запуска на наборе аудиозаписей:
-```
+Example run on a set of audio recordings:
+```bash
 python3 test.py \
    --config=hw_asr/configs/eval_metrics_configs/test-clean.json \
    --resume=saved/models/$EXP/$RUN/$CHECKPOINT.pth \
    --test-data-folder=test_data
 ```
 
-(дополнительный конфиг тут передаётся, чтобы задать используемый декодер логитов в текст)
+> The language model and dataset (when inferring on one of the datasets) will be loaded automatically.
 
-> Языковая модель, используемая для декодирования, и данные (при инференсе на одном из датасетов) будут загружены автоматически при запуске скрипта.
+If ground truth transcriptions are provided, the script outputs the average CER and WER metrics for all audio recordings under different decoding methods (argmax, beam search, beam search + LM). Predictions, along with ground truth from the dataset, will be saved to the file specified by the `-o, --output` argument (default: `"output.json"`).
 
-В результате, если были даны целевые результаты транскрибации, будут напечатаны значения метрик CER и WER, усреднённые по всем аудиозаписям, при разных вариантах декодирования предсказанного текста по вероятностям, выданным моделью (argmax, beam search, beam search + LM).
-Также в файл, переданный как аргумент `-o, --output` (по умолчанию - `"output.json"`) будут записаны предсказания модели вместе с верными ответами из датасета.
+> For beam search-generated transcriptions, the script also saves the likelihoods of predictions according to the model's logits.
 
-> Для сгенерированных с помощью beam search результатов транскрибации в файл также будет записана их вер-ть согласно выходным логитам модели.
+## Reproducing Training
 
-## Как воспроизвести обучение
+### General Information
 
-### Общие сведения
+The entire training process is defined by a JSON configuration file ([examples](hw_asr/configs/)). Training can be started by running [train.py](./train.py) and specifying the config file path as the `-c, --config` argument.
 
-Весь процесс обучения определяется конфигом в формате JSON ([примеры](hw_asr/configs/)).
-Запустить обучение можно вызовом скрипта [train.py](./train.py), указав путь до конфига в качестве аргумента `-c, --config`.
+To fine-tune a model, specify the checkpoint path using the `-r, --resume` argument. Initial model weights will be loaded from the checkpoint instead of being randomly initialized.
 
-Для дообучения модели можно указать путь до неё в качестве аргумента `-r, --resume`.
-Тогда изначальные веса модели будут загружены из чекпоинта вместо того, чтобы быть случайно инициализированными.
+### Reproducing the Best Checkpoint
 
-### Воспроизведение лучшего чекпоинта
-
-Обучение осуществлялось вызовом команды
-
-```
+Training was performed using the command:
+```bash
 python3 train.py \
    --config=hw_asr/configs/1+6/kaggle_deepspeech2_1+6_bidir_gru.json
 ```
 
-И затем (для дообучения на Librispeech test-other) вызовом
-```
+Followed by fine-tuning on LibriSpeech test-other:
+```bash
 python3 test.py \
    --config=hw_asr/configs/1+6/kaggle_deepspeech2_1+6_other_finetuning.json \
    --resume=saved/models/kaggle_deepspeech2_1+6/$RUN_NAME/model_best.pth
 ```
-где $RUN_NAME - имя запуска в первом случае
+where `$RUN_NAME` is the run name from the first step.
 
-> Все необходимые для обучения данные будут загружены автоматически.
+> All required datasets will be downloaded automatically.
 
-В конфигах указаны некоторые пути до датасетов (`data_dir`, `index_dir`), которые использовались в авторском окружении (при обучении на Kaggle). Их можно полностью удалить из конфига или заменить на свои.
+Some paths to datasets (`data_dir`, `index_dir`) in the configs correspond to the author's environment (training on Kaggle). These can be removed or replaced with your own paths.
 
-В конфигах указано сохранение чекпоинтов на Google Drive (секция "external storage"). Чтобы использовать его для своего личного аккаунта, следуйте инструкциям [отсюда](docs/gdrive_storage.md#access-to-a-personal-google-drive) и внесите в секцию "external storage" конфига соответствующие изменения (указав id папки на Google Drive и путь до файла с credentials). Также можно отключить экспорт чекпоинтов на Google Drive, удалив из конфига обучения секцию "external storage".
+The configs specify checkpoint saving to Google Drive ("external storage" section). To use it with your personal account, follow the instructions [here](docs/gdrive_storage.md#access-to-a-personal-google-drive) and update the "external storage" section with your folder ID and credentials file path. Alternatively, you can disable exporting to Google Drive by removing the "external storage" section.
 
-Для логирования используется [WandB](https://wandb.ai/), для чего необходимо либо войти в свой аккаунт, используя `wandb login`, либо указать свой токен (authentication key) в переменной окружения [`WANDB_API_KEY`](https://docs.wandb.ai/guides/track/environment-variables/).
+[WandB](https://wandb.ai/) is used for logging. You must either log in using `wandb login` or set your token (authentication key) via the [`WANDB_API_KEY`](https://docs.wandb.ai/guides/track/environment-variables/) environment variable.
 
-## Тестирование реализации
+## Testing the Implementation
 
-В [`hw_asr/tests`](hw_asr/tests) представлены тесты для проверки работоспособности кода. Можно запустить их все командой:
-```
+Tests for verifying some parts of the code are located in [`hw_asr/tests`](hw_asr/tests). All tests can be run with:
+```bash
 python3 -m unittest discover hw_asr/tests
 ```
 
-## Структура репозитория
-- `hw_asr`
-1. `hw_asr/configs`: файлы конфигурации
+## Author
 
-файл конфигурации (JSON) полностью определяет процесс обучения (какая модель берётся, какие данные используются, как и какие логируются метрики)
-
-2. `hw_asr/tests`: тесты реализации
-
-Можно запустить все командой
-```
-python3 -m unittest discover hw_asr/tests
-```
-
-3. остальные поддиректории: исходный код пайплайна
-
-- `notebooks`: Jupyter-ноутбуки с демонстрацией какой-либо функциональности пайплайна (сейчас там только аугментации)
-
-#### Скрипты
-
-Подробнее про каждый из них можно узнать, вызвав `python3 {script_name} --help`.
-
-- `train.py`: запуск процедуры обучения из консоли
-
-- `test.py`: запуск оценки сохранённой модели из консоли
-
-- `scripts/model_loader/model_loader.py`: импорт моделей из внешнего хранилища (поддержка реализована только для Google Drive)
-
-#### Файлы для импорта моделей из Google Drive:
-
-Используются в скрипте `model_loader.py` для загрузки чекпоинтов из авторского хранилища.
-
-- `gdrive_storage/external_storage.json`: файл конфигурации внешнего хранилища, в котором указывается директория на Google Drive и путь до файла с credentials (подробнее - [тут](./docs/gdrive_storage.md))
-
-## Автор
-
-Егоров Егор:
-- tg: [@TrickmanOff](https://t.me/TrickmanOff)
-- e-mail: yegyegorov@gmail.com
+Egor Egorov:
+- Telegram: [@TrickmanOff](https://t.me/TrickmanOff)
+- Email: yegyegorov@gmail.com
